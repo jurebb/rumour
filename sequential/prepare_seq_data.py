@@ -4,6 +4,15 @@ import os
 _DATA_DIR = "/home/interferon/PycharmProjects/rumoureval19/rumour"      # directory where twitter.pkl and reddit.pkl
                                                                         # are located
 
+# comments:
+    # see main for usage examples
+    # - what to do with ids that are not found (currently nothing, ignored, see first twitter training in
+  # print_structure_example())
+    # - source posts don't all have the same label (e.g. query, support)
+    # - from Turing paper, this is not yet implemented: Since there is overlap between
+            # branches originating from the same source
+            # tweet, we exclude the repeating tweets from the
+            # loss function using a mask at the training stage.
 
 def load_twitter_data():
     """Loads twitter dataset in twitter.pkl"""
@@ -49,10 +58,11 @@ def branchify_twitter_extraction_loop(data, branches_texts, branches_labels):
     """Extract tweets from ids of branches"""
 
     for source_text in data:
-        branch_texts = []
-        branch_labels = []
         ids_of_branches = source_text['branches']   # gives a list of branches ids from json structure
         for branch_ids in ids_of_branches:
+            branch_texts = []
+            branch_labels = []
+
             for id in branch_ids:
                 if source_text['source']['id_str'] == id:       # if the id in question is the source post
                     if source_text['source']['id_str'] != str(source_text['source']['id']):
@@ -80,10 +90,11 @@ def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
     """Extract reddit posts from ids of branches"""
 
     for source_text in data:
-        branch_texts = []
-        branch_labels = []
         ids_of_branches = source_text['branches']   # gives a list of branches ids from json structure
         for branch_ids in ids_of_branches:
+            branch_texts = []
+            branch_labels = []
+
             for id in branch_ids:
                 if source_text['source']['id_str'] == id:       # if the id in question is the source post
                     if source_text['source']['id_str'] != source_text['id']:
@@ -142,6 +153,7 @@ if __name__ == "__main__":
 
     d_tw = load_twitter_data()
     tr_x, tr_y, ts_x, ts_y, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
+
     print('len(tr_x)', len(tr_x))
     print('tr_x[0:10]', tr_x[0:10])
     print('len(tr_y)', len(tr_y))
@@ -157,8 +169,12 @@ if __name__ == "__main__":
 
     d_rd = load_reddit_data()
     tr_x, tr_y, ts_x, ts_y, dv_x, dv_y = branchify_data(d_rd, branchify_reddit_extraction_loop)
+
     print('len(tr_x)', len(tr_x))
-    print('tr_x[0:10]', tr_x[0:10])
+    print('tr_x[0:9]')
+    for branch in range(0,9):
+        print(tr_x[branch])
+        print(tr_y[branch])
     print('len(tr_y)', len(tr_y))
     print('tr_y[0:10]', tr_y[0:10])
     print('len(ts_x)', len(ts_x))

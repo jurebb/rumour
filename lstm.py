@@ -1,5 +1,3 @@
-import json
-from pomocni import tree2branches
 import numpy as np
 
 from keras.layers import LSTM, Dense, Embedding, Input
@@ -8,14 +6,13 @@ from keras.layers import Activation
 from keras.optimizers import Adam
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+import pandas as pd
 
 import os
 from keras.layers import Bidirectional
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-
-from data_set import load_dataset, load_true_labels
 
 # %%
 DIR = 'data\\data\\rumoureval-2019-training-data\\'
@@ -29,7 +26,9 @@ def class_to_onehot(y):
 
 def main():
 
-    data = load_dataset()
+    os.chdir(DIR)
+    data = pd.read_pickle('reddit.pkl')
+
     counter = 0
     data2 = []
     data3 = []

@@ -9,7 +9,7 @@ import numpy as np
 
 from keras.models import Sequential
 from keras.preprocessing.text import Tokenizer
-from keras.layers import Dense, Activation, LSTM, Embedding, Dropout, Input
+from keras.layers import Dense, Activation, LSTM, Embedding, Dropout, Input, TimeDistributed
 from keras.preprocessing import sequence
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.optimizers import Adam
@@ -27,6 +27,7 @@ _NUM_CLASSES = 0
 
 # comments and TODO:
 # - tolower() prije tokeniziranja (i pretprocessiranje, opcenito - kidanje, stemmanje, micanje interp znakova itd???)
+# - stavi u klasu 5 one koji su paddani
 
 
 def class_to_onehot(y):
@@ -36,9 +37,9 @@ def class_to_onehot(y):
     return y_oh
 
 
-def lstm_model(max_branch_length):
+def lstm_model(max_branch_length, EMBEDDING_DIM, len_dataset):
     '''
-    Describes and bhuilds a kersan LSTM model
+    Describes and builds a keras LSTM model
     :return: the compiled model
     '''
 
@@ -46,11 +47,10 @@ def lstm_model(max_branch_length):
     # TODO Dropout?
 
     model = Sequential()
-    # model.add(Embedding(10, 32))
-    model.add(LSTM(32))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(LSTM(32, return_sequences=True))                          # , input_shape=(max_branch_length, EMBEDDING_DIM)
+    model.add(TimeDistributed(Dense(4, activation='softmax')))
 
-    model.compile(loss='binary_crossentropy',
+    model.compile(loss='categorical_crossentropy',
                   optimizer='rmsprop',
                   metrics=['accuracy'])
 
@@ -106,6 +106,44 @@ def pad_ys(y_branch, max_branch_length):
     return np.asarray(new_y_branch)
 
 
+def make_embedding_matrix():
+    "makes embedding matrix from GLOVE_DIR file"
+    emb_index = {}
+    f = open(GLOVE_DIR, encoding="utf8")
+    for line in f:
+        values = line.split()
+        word = values[0]
+        try:
+            coefs = np.asarray(values[1:], dtype='float32')
+            emb_index[word] = coefs
+        except:
+            pass
+    f.close()
+
+    print('Found %s word vectors.' % len(emb_index))
+
+    return emb_index
+
+
+def onehot_encode_ys(tr_y, ts_y, dv_y):
+    le = LabelEncoder()
+    le = le.fit(list(y_values))
+
+    tr_y = np.asarray(tr_y)
+    for row_index in range(tr_y.shape[0]):
+        tr_y[row_index] = np.asarray(class_to_onehot(le.transform(tr_y[row_index])))
+
+    ts_y = np.asarray(ts_y)
+    for row_index in range(ts_y.shape[0]):
+        ts_y[row_index] = np.asarray(class_to_onehot(le.transform(ts_y[row_index])))
+
+    dv_y = np.asarray(dv_y)
+    for row_index in range(dv_y.shape[0]):
+        dv_y[row_index] = np.asarray(class_to_onehot(le.transform(dv_y[row_index])))
+
+    return tr_y, ts_y, dv_y
+
+
 if __name__ == "__main__":
 
     d_tw = data.load_reddit_data()
@@ -122,12 +160,7 @@ if __name__ == "__main__":
 
     _NUM_CLASSES = len(y_values)
 
-    le = LabelEncoder()
-    le = le.fit(list(y_values))
-
-    tr_y = np.asarray(tr_y)
-    for row_index in range(tr_y.shape[0]):
-        tr_y[row_index] = np.asarray(class_to_onehot(le.transform(tr_y[row_index])))
+    tr_y, ts_y, dv_y = onehot_encode_ys(tr_y, ts_y, dv_y)
 
     EMBEDDING_DIM = 200
     MAX_SEQUENCE_LENGTH = 50
@@ -145,31 +178,13 @@ if __name__ == "__main__":
     for row_index in range(tr_x.shape[0]):
         train_sequences.append(tokenizer.texts_to_sequences(tr_x[row_index]))
 
-    # for i in range(len(train_sequences)):
-    #         train_sequences[i] = sequence.pad_sequences(train_sequences[i], maxlen=MAX_SEQUENCE_LENGTH)
-
     dev_sequences = []
     for row_index in range(dv_x.shape[0]):
         dev_sequences.append(tokenizer.texts_to_sequences(dv_x[row_index]))
 
-    # for i in range(len(dev_sequences)):
-    #     dev_sequences[i] = sequence.pad_sequences(dev_sequences[i], maxlen=MAX_SEQUENCE_LENGTH)
-
     word_index = tokenizer.word_index
 
-    embeddings_index = {}
-    f = open(GLOVE_DIR, encoding="utf8")
-    for line in f:
-        values = line.split()
-        word = values[0]
-        try:
-            coefs = np.asarray(values[1:], dtype='float32')
-            embeddings_index[word] = coefs
-        except:
-            pass
-    f.close()
-
-    print('Found %s word vectors.' % len(embeddings_index))
+    embeddings_index = make_embedding_matrix()
 
     embedding_matrix = np.zeros((len(word_index) + 1, EMBEDDING_DIM))
     for word, i in word_index.items():
@@ -187,6 +202,9 @@ if __name__ == "__main__":
     for branch in train_sequences:
         branches_train.append(avg_embedding(branch, embedding_matrix, EMBEDDING_DIM, max_branch_length))
 
+    for branch_index in range(len(branches_train)):
+        branches_train[branch_index] = np.asarray(branches_train[branch_index])
+
     # pad the ys the same way
     for j in range(len(tr_y)):
         tr_y[j] = pad_ys(tr_y[j], max_branch_length)
@@ -194,14 +212,11 @@ if __name__ == "__main__":
     # sequence_input = Input(shape=(MAX_SEQUENCE_LENGTH,), dtype='int32')
     ##################################################################################################################
 
-    # x_train = sequence.pad_sequences(x_train, maxlen=maxlen)
-    # x_test = sequence.pad_sequences(x_test, maxlen=maxlen)
-    # print('x_train shape:', x_train.shape)
-    # print('x_test shape:', x_test.shape)
+    model = lstm_model(max_branch_length, EMBEDDING_DIM, len(branches_train))
 
-    model = lstm_model(max_branch_length)
+    tr_y = list(tr_y)
 
-    model.fit(branches_train, tr_y, batch_size=128, epochs=1)
+    model.fit(np.array(branches_train), np.array(tr_y), batch_size=128, epochs=1)
     score = model.evaluate(ts_x, ts_y, batch_size=128)
 
     print('model.evaluate', score)

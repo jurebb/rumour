@@ -32,6 +32,8 @@ MAX_NB_WORDS = 200000
 
 # comments and TODO:
 # - tolower() prije tokeniziranja (i pretprocessiranje, opcenito - kidanje, stemmanje, micanje interp znakova itd???)
+# - maskanje paddanih dijelova brancheva
+# - dense 4 ili 5 neurona (num_classes ili num_classes+1? na y padam [0000] ili neku drugu klasu ili cak 5-dim vektor?
 
 
 def class_to_onehot(y):

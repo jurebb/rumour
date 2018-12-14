@@ -1,7 +1,6 @@
 import pandas as pd
 
 import json
-from pomocni import tree2branches
 import numpy as np
 
 from keras.layers import LSTM, Dense, Embedding, Input
@@ -18,8 +17,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from data_set import load_dataset, load_true_labels
 from sequential.prepare_seq_data import *
+
+from numpy.random import seed
+from tensorflow import set_random_seed
+seed(12)
+set_random_seed(22)
 
 _DATA_DIR = "data"
 
@@ -126,33 +129,18 @@ def remove_duplicated_data(preds_test, y_test, d_tw, dv_x):
 
     y_test2 = []
     preds_test2 = []
-    index_of_text = dict()
     for i in range(len(y_test)):
         if x_test_text_branchifyed[i] in x_test_text_original: 
             y_test2.append(y_test[i])
             preds_test2.append(preds_test[i])
             x_test_text_original.remove(x_test_text_branchifyed[i])
-            index_of_text[x_test_text_branchifyed[i]] = i
-        else:
-            j = index_of_text[x_test_text_branchifyed[i]]
-            if preds_test[i] == preds_test[j]:
-                print('jednaki')
-                print(i)
-                print(j)
-                print(preds_test[i])
-                print(preds_test[j])
-            else:
-                print('razliciti')
-                print(preds_test[i])
-                print(preds_test[j])
-                
 
     return preds_test2, y_test2
 
 
 MAX_BRANCH_LENGTH = 25
 NUMBER_OF_CLASSES = 4
-GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
+GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
 def main():
     d_tw = load_twitter_data()

@@ -149,7 +149,7 @@ def print_structure_example():
 
 if __name__ == "__main__":
 
-    # print_structure_example()
+    print_structure_example()
 
     d_tw = load_twitter_data()
     tr_x, tr_y, ts_x, ts_y, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)

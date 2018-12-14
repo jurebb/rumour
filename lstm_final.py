@@ -18,6 +18,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sequential.prepare_seq_data import *
+from sequential.additional_features import *
 
 from numpy.random import seed
 from tensorflow import set_random_seed
@@ -84,6 +85,7 @@ def transform_data(tr_x, embeddings_index):
     x = np.asarray(x)
     return x
 
+
 def transform_labels(tr_y):
     from sklearn.externals import joblib
     le = joblib.load('le.pkl')
@@ -102,6 +104,7 @@ def transform_labels(tr_y):
     y_train = np.asarray(y_train)
     return y_train
 
+
 def remove_padded_data(preds_test, y_test):
     y_test2 = []
     preds_test2 = []
@@ -111,6 +114,7 @@ def remove_padded_data(preds_test, y_test):
             preds_test2.append(preds_test[i])
 
     return preds_test2, y_test2
+
 
 def remove_duplicated_data(preds_test, y_test, d_tw, dv_x):
     x_test_text_branchifyed = []
@@ -138,6 +142,70 @@ def remove_duplicated_data(preds_test, y_test, d_tw, dv_x):
     return preds_test2, y_test2
 
 
+def concat_features(feature_functions_list, train_set, test_set, dev_set, train_y, test_y, dev_y):
+    new_train_set = []
+    new_test_set = None
+    new_dev_set = None
+    if test_set is not None:
+        new_test_set = []
+    if dev_set is not None:
+        new_dev_set = []
+
+    #TODO wont currently work for multiple function features, it will append to train_set all the time
+
+    for feature_function in feature_functions_list:
+        tr_x_feature_val, ts_x_feature_val, dv_x_feature_val = feature_function()
+
+        tweet_counter = 0
+        for i in range(len(train_set)):
+            new_branch = []
+            for j in range(len(train_set[i])):
+                if not np.array_equal(train_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
+                    # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
+                    new_branch.append(np.concatenate((train_set[i][j], np.array([tr_x_feature_val[tweet_counter]]))))
+                    tweet_counter += 1
+                else:
+                    new_branch.append(
+                        np.concatenate((train_set[i][j], np.array([0]))))
+            new_train_set.append(new_branch)
+        new_train_set = np.asarray(new_train_set)
+
+        if test_set is not None:
+            tweet_counter = 0
+            for i in range(len(test_set)):
+                new_branch = []
+                for j in range(len(test_set[i])):
+                    if not np.array_equal(test_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
+                        # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
+                        new_branch.append(
+                            np.concatenate((test_set[i][j], np.array([ts_x_feature_val[tweet_counter]]))))
+                        tweet_counter += 1
+                    else:
+                        new_branch.append(
+                            np.concatenate((test_set[i][j], np.array([0]))))
+                new_test_set.append(new_branch)
+            new_test_set = np.asarray(new_test_set)
+
+        if dev_set is not None:
+            tweet_counter = 0
+            for i in range(len(dev_set)):
+                new_branch = []
+                for j in range(len(dev_set[i])):
+                    if not np.array_equal(dev_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
+                        # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
+                        new_branch.append(
+                            np.concatenate((dev_set[i][j], np.array([dv_x_feature_val[tweet_counter]]))))
+                        tweet_counter += 1
+                    else:
+                        new_branch.append(
+                            np.concatenate((dev_set[i][j], np.array([0]))))
+                new_dev_set.append(new_branch)
+            new_dev_set = np.asarray(new_dev_set)
+
+        return new_train_set, new_test_set, new_dev_set
+
+
+
 MAX_BRANCH_LENGTH = 25
 NUMBER_OF_CLASSES = 4
 GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
@@ -150,6 +218,13 @@ def main():
 
     x_train = transform_data(tr_x, embeddings_index)
     y_train = transform_labels(tr_y)
+
+    x_test = transform_data(dv_x, embeddings_index)
+    y_test = transform_labels(dv_y)
+
+    #### feature engineering
+    x_train, _, x_test = concat_features([twitter_user_id_feature], x_train, None, x_test, y_train, None, y_test)
+    ####
 
     model = Sequential()
     model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
@@ -165,12 +240,9 @@ def main():
     #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
     #y_train = [np.argmax(xx) for x in y_train for xx in x]
 
-    x_test = transform_data(dv_x, embeddings_index)
-    y_test = transform_labels(dv_y)
-
     preds_test = model.predict(x_test, 100) 
     preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
-    y_test = [np.argmax(xx)  if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
+    y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
     print(len(y_test))
     print(accuracy_score(preds_test, y_test))
 
@@ -181,6 +253,3 @@ def main():
     print(preds_test)
 
 main()
-
-    
-    

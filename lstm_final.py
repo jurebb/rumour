@@ -25,7 +25,7 @@ from tensorflow import set_random_seed
 seed(12)
 set_random_seed(22)
 
-_DATA_DIR = "data"
+_DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"
 
 def class_to_onehot(y, max_y = None):
     if max_y == None:
@@ -208,7 +208,7 @@ def concat_features(feature_functions_list, train_set, test_set, dev_set, train_
 
 MAX_BRANCH_LENGTH = 25
 NUMBER_OF_CLASSES = 4
-GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 
 def main():
     d_tw = load_twitter_data()
@@ -223,8 +223,9 @@ def main():
     y_test = transform_labels(dv_y)
 
     #### feature engineering
-    x_train, _, x_test = concat_features([twitter_user_id_feature], x_train, None, x_test, y_train, None, y_test)
+    x_train, _, x_test = concat_features([twitter_retweet_count_feature], x_train, None, x_test, y_train, None, y_test)
     ####
+    print(x_train.shape)
 
     model = Sequential()
     model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))

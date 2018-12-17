@@ -1,5 +1,5 @@
 from sequential.prepare_seq_data import *
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import numpy as np
 
 def twitter_length():
@@ -22,6 +22,63 @@ def scale(x_train, x_test):
 
     return x_train, x_test
 
+def scale2(x_train, x_test):
+
+    x_train = np.asarray(x_train).reshape((-1, 1))
+    x_test = np.asarray(x_test).reshape((-1, 1))
+    ss = MinMaxScaler()
+    x_train = ss.fit_transform(x_train)
+    x_test = ss.transform(x_test)
+    x_train = np.asarray(x_train).reshape(-1)
+    x_test = np.asarray(x_test).reshape(-1)
+
+    return x_train, x_test
+
+def transform_description(description, embeddings_index):
+    x = []
+    for sentence in description:
+        suma = []
+        br = 0
+        if sentence != None:
+            for word in sentence.split():
+                word = word.lower()
+                if len(word) > 1 and word[-1] in '.!?*,':
+                    word = word[:-1]
+                if word in embeddings_index:
+                    if len(suma) == 0:
+                        for broj in embeddings_index[word]:
+                            suma.append(broj)
+                        suma = np.asarray(suma)
+                    else:
+                        suma += embeddings_index[word]
+                    br += 1
+        if len(suma) == 0:
+            for broj in embeddings_index['.']:
+                suma.append(broj)
+            suma = np.asarray(suma)
+            br += 1
+        x.append(suma / br)
+
+    x = np.asarray(x)
+    return x
+
+def twitter_user_description_feature_(embeddings_index):
+    def twitter_user_description_feature():
+        """
+        extract user ids the same way text is extracted to be concatenated
+        :return:
+        """
+        d_tw = load_twitter_data()
+        tr_x_user_description = branchify_twitter_extract_user_feature_loop(d_tw['train'], 'description')
+        dv_x_user_description = branchify_twitter_extract_user_feature_loop(d_tw['dev'], 'description')
+
+        tr_x_user_description = transform_description(tr_x_user_description, embeddings_index)
+        dv_x_user_description = transform_description(dv_x_user_description, embeddings_index)
+
+        return tr_x_user_description, None, dv_x_user_description
+
+    return twitter_user_description_feature
+
 
 def twitter_user_id_feature():
     """
@@ -32,21 +89,11 @@ def twitter_user_id_feature():
     tr_x_username_ids = twitter_user_id_extraction_loop(d_tw['train'])
     dv_x_username_ids = twitter_user_id_extraction_loop(d_tw['dev'])
 
-    tr_x_username_ids, dv_x_username_ids = scale(tr_x_username_ids, dv_x_username_ids)
+    tr_x_username_ids, dv_x_username_ids = scale2(tr_x_username_ids, dv_x_username_ids)
 
-    '''
-    maximum_id = max(tr_x_username_ids)
-    minimum_id = min(tr_x_username_ids)
-
-    for i in range(len(tr_x_username_ids)):
-        for j in range(len(tr_x_username_ids[i])):
-            tr_x_username_ids[i][j] = (tr_x_username_ids[i][j] - minimum_id) / (maximum_id - minimum_id)
-
-    for i in range(len(dv_x_username_ids)):
-        for j in range(len(dv_x_username_ids[i])):
-            dv_x_username_ids[i][j] = (dv_x_username_ids[i][j] - minimum_id) / (maximum_id - minimum_id)
-    '''
     return tr_x_username_ids, None, dv_x_username_ids
+
+
 
 def twitter_retweet_count_feature():
     """
@@ -61,16 +108,23 @@ def twitter_retweet_count_feature():
 
     return tr_x_retweet_count, None, dv_x_retweet_count
 
-def twitter_favourited_feature():
+    
+
+def twitter_favorite_count_feature():
     """
     extract user ids the same way text is extracted to be concatenated
     :return:
     """
     d_tw = load_twitter_data()
-    tr_x_favourited = branchify_twitter_extract_feature_loop(d_tw['train'], 'favourited')
-    dv_x_favourited = branchify_twitter_extract_feature_loop(d_tw['dev'], 'favourited')
+    tr_x_favorite_count = branchify_twitter_extract_feature_loop(d_tw['train'], 'favorite_count')
+    dv_x_favorite_count = branchify_twitter_extract_feature_loop(d_tw['dev'], 'favorite_count')
 
-    return tr_x_favourited, None, dv_x_favourited
+    tr_x_favorite_count, dv_x_favorite_count = scale2(tr_x_favorite_count, dv_x_favorite_count)
+
+    print(len(tr_x_favorite_count))
+    print(tr_x_favorite_count[0])
+
+    return tr_x_favorite_count, None, dv_x_favorite_count
 
 def twitter_profile_use_background_image_feature():
     """
@@ -96,6 +150,18 @@ def twitter_profile_favourites_count():
 
     return tr_x_profile_favourites_count, None, dv_x_profile_favourites_count
 
+def twitter_time_feature():
+    """
+    extract user ids the same way text is extracted to be concatenated
+    :return:
+    """
+    d_tw = load_twitter_data()
+    tr_x_time = branchify_twitter_extract_time_loop(d_tw['train'])
+    dv_x_time = branchify_twitter_extract_time_loop(d_tw['dev'])
+
+    tr_x_time, dv_x_time = scale(tr_x_time, dv_x_time)
+
+    return tr_x_time, None, dv_x_time
 
 def branchify_twitter_extract_feature_loop(data, new_feature='retweet_count'):
     """Extract features from ids of branches"""

@@ -50,6 +50,7 @@ def make_embeddings_index():
     f.close()
     return embeddings_index
 
+
 def transform_data(tr_x, embeddings_index):
     x = []
     for podatak in tr_x:
@@ -84,6 +85,7 @@ def transform_data(tr_x, embeddings_index):
         x.append(temp_podatak)
     x = np.asarray(x)
     return x
+
 
 
 def transform_labels(tr_y):
@@ -162,11 +164,20 @@ def concat_features(feature_functions_list, train_set, test_set, dev_set, train_
             for j in range(len(train_set[i])):
                 if not np.array_equal(train_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
                     # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
-                    new_branch.append(np.concatenate((train_set[i][j], np.array([tr_x_feature_val[tweet_counter]]))))
+
+                    try:
+                        new_branch.append(np.concatenate((train_set[i][j], np.array([tr_x_feature_val[tweet_counter]]))))
+                    except ValueError:
+                        new_branch.append(np.concatenate((train_set[i][j], np.array(tr_x_feature_val[tweet_counter])))) #WITHOUT EXTRA []
                     tweet_counter += 1
                 else:
-                    new_branch.append(
-                        np.concatenate((train_set[i][j], np.array([0]))))
+                    try:
+                        new_branch.append(
+                            np.concatenate((train_set[i][j], np.array([0] * len(tr_x_feature_val[0])))))
+                    except TypeError:
+                        new_branch.append(
+                            np.concatenate((train_set[i][j], np.array([0]))))
+
             new_train_set.append(new_branch)
         new_train_set = np.asarray(new_train_set)
 
@@ -177,12 +188,20 @@ def concat_features(feature_functions_list, train_set, test_set, dev_set, train_
                 for j in range(len(test_set[i])):
                     if not np.array_equal(test_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
                         # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
-                        new_branch.append(
-                            np.concatenate((test_set[i][j], np.array([ts_x_feature_val[tweet_counter]]))))
+                        try:
+                            new_branch.append(
+                                np.concatenate((test_set[i][j], np.array([ts_x_feature_val[tweet_counter]]))))
+                        except ValueError:
+                            new_branch.append(
+                                np.concatenate((test_set[i][j], np.array(ts_x_feature_val[tweet_counter]))))
                         tweet_counter += 1
                     else:
-                        new_branch.append(
-                            np.concatenate((test_set[i][j], np.array([0]))))
+                        try:
+                            new_branch.append(
+                                np.concatenate((test_set[i][j], np.array([0] * len(ts_x_feature_val[0])))))
+                        except TypeError:
+                            new_branch.append(
+                                np.concatenate((test_set[i][j], np.array([0]))))
                 new_test_set.append(new_branch)
             new_test_set = np.asarray(new_test_set)
 
@@ -193,12 +212,20 @@ def concat_features(feature_functions_list, train_set, test_set, dev_set, train_
                 for j in range(len(dev_set[i])):
                     if not np.array_equal(dev_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
                         # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
-                        new_branch.append(
-                            np.concatenate((dev_set[i][j], np.array([dv_x_feature_val[tweet_counter]]))))
+                        try:
+                            new_branch.append(
+                                np.concatenate((dev_set[i][j], np.array([dv_x_feature_val[tweet_counter]]))))
+                        except ValueError:
+                            new_branch.append(
+                                np.concatenate((dev_set[i][j], np.array(dv_x_feature_val[tweet_counter]))))
                         tweet_counter += 1
                     else:
-                        new_branch.append(
-                            np.concatenate((dev_set[i][j], np.array([0]))))
+                        try:
+                            new_branch.append(
+                                np.concatenate((dev_set[i][j], np.array([0] * len(dv_x_feature_val[0])))))
+                        except TypeError:
+                            new_branch.append(
+                                np.concatenate((dev_set[i][j], np.array([0]))))
                 new_dev_set.append(new_branch)
             new_dev_set = np.asarray(new_dev_set)
 
@@ -216,41 +243,48 @@ def main():
 
     embeddings_index = make_embeddings_index()
 
-    x_train = transform_data(tr_x, embeddings_index)
-    y_train = transform_labels(tr_y)
+    x_train_temp = transform_data(tr_x, embeddings_index) 
+    y_train_temp = transform_labels(tr_y) 
 
-    x_test = transform_data(dv_x, embeddings_index)
-    y_test = transform_labels(dv_y)
+    x_test_temp = transform_data(dv_x, embeddings_index) 
+    y_test_temp = transform_labels(dv_y)
+
+    twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
     #### feature engineering
-    x_train, _, x_test = concat_features([twitter_retweet_count_feature], x_train, None, x_test, y_train, None, y_test)
+    for new_feature_f in [twitter_user_description_feature, twitter_user_id_feature, twitter_retweet_count_feature, twitter_profile_favourites_count, twitter_profile_use_background_image_feature, twitter_time_feature]:
+        x_train, _, x_test = concat_features([new_feature_f], x_train_temp, None, x_test_temp, y_train_temp, None, y_test_temp)
+        y_train = y_train_temp
+        y_test = y_test_temp
+        print(x_train.shape)
+
     ####
-    print(x_train.shape)
+        print(x_train.shape)
 
-    model = Sequential()
-    model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
-    model.add(Activation('sigmoid'))
-    model.add(TimeDistributed(Dense(NUMBER_OF_CLASSES)))
-    model.add(Activation('softmax'))
+        model = Sequential()
+        model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+        model.add(Activation('sigmoid'))
+        model.add(TimeDistributed(Dense(NUMBER_OF_CLASSES)))
+        model.add(Activation('softmax'))
 
-    adam = Adam(lr=0.001)
-    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
+        adam = Adam(lr=0.001)
+        model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
+        model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
 
-    #preds_train = model.predict(x_train, 100)
-    #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
-    #y_train = [np.argmax(xx) for x in y_train for xx in x]
+        #preds_train = model.predict(x_train, 100)
+        #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
+        #y_train = [np.argmax(xx) for x in y_train for xx in x]
 
-    preds_test = model.predict(x_test, 100) 
-    preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
-    y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
-    print(len(y_test))
-    print(accuracy_score(preds_test, y_test))
+        preds_test = model.predict(x_test, 100) 
+        preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
+        y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
+        print(len(y_test))
+        print(accuracy_score(preds_test, y_test))
 
-    preds_test, y_test = remove_padded_data(preds_test, y_test)
-    preds_test, y_test = remove_duplicated_data(preds_test, y_test, d_tw, dv_x)
+        preds_test, y_test = remove_padded_data(preds_test, y_test)
+        preds_test, y_test = remove_duplicated_data(preds_test, y_test, d_tw, dv_x)
 
-    print(accuracy_score(preds_test, y_test))
-    print(preds_test)
+        print(accuracy_score(preds_test, y_test))
+        print(preds_test)
 
 main()

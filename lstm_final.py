@@ -19,6 +19,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sequential.prepare_seq_data import *
 from sequential.additional_features import *
+from sequential.additional_computed_features import *
 
 from numpy.random import seed
 from tensorflow import set_random_seed
@@ -26,6 +27,10 @@ seed(12)
 set_random_seed(22)
 
 _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"
+MAX_BRANCH_LENGTH = 24
+NUMBER_OF_CLASSES = 4
+# GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
+GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
 def class_to_onehot(y, max_y = None):
     if max_y == None:
@@ -232,14 +237,12 @@ def concat_features(feature_functions_list, train_set, test_set, dev_set, train_
         return new_train_set, new_test_set, new_dev_set
 
 
-
-MAX_BRANCH_LENGTH = 25
-NUMBER_OF_CLASSES = 4
-GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
-
 def main():
     d_tw = load_twitter_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
+
+    MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
+    print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH)
 
     embeddings_index = make_embeddings_index()
 
@@ -252,14 +255,15 @@ def main():
     twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
     #### feature engineering
-    for new_feature_f in [twitter_user_description_feature, twitter_user_id_feature, twitter_retweet_count_feature, twitter_profile_favourites_count, twitter_profile_use_background_image_feature, twitter_time_feature]:
+    # for new_feature_f in [twitter_user_description_feature, twitter_user_id_feature, twitter_retweet_count_feature, twitter_profile_favourites_count, twitter_profile_use_background_image_feature, twitter_time_feature]:
+    for new_feature_f in [twitter_user_mention_count_feature]:
         x_train, _, x_test = concat_features([new_feature_f], x_train_temp, None, x_test_temp, y_train_temp, None, y_test_temp)
         y_train = y_train_temp
         y_test = y_test_temp
-        print(x_train.shape)
+        print('x_train.shape', x_train.shape)
 
     ####
-        print(x_train.shape)
+        print('x_train.shape', x_train.shape)
 
         model = Sequential()
         model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
@@ -278,13 +282,13 @@ def main():
         preds_test = model.predict(x_test, 100) 
         preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
         y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
-        print(len(y_test))
-        print(accuracy_score(preds_test, y_test))
+        print('len(y_test)', len(y_test))
+        print('accuracy_score(preds_test, y_test)', accuracy_score(preds_test, y_test))
 
         preds_test, y_test = remove_padded_data(preds_test, y_test)
         preds_test, y_test = remove_duplicated_data(preds_test, y_test, d_tw, dv_x)
 
-        print(accuracy_score(preds_test, y_test))
-        print(preds_test)
+        print('accuracy_score(preds_test, y_test) after removing padded/duplicated', accuracy_score(preds_test, y_test))
+        print('preds_test', preds_test)
 
 main()

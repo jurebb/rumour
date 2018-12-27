@@ -9,7 +9,7 @@ import numpy as np
 
 from keras.models import Sequential
 from keras.preprocessing.text import Tokenizer
-from keras.layers import Dense, Activation, LSTM, Embedding, Dropout, Input, TimeDistributed
+from keras.layers import Dense, Activation, LSTM, Embedding, Dropout, Input, TimeDistributed, Masking
 from keras.preprocessing import sequence
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.optimizers import Adam
@@ -17,6 +17,12 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelEncoder
 from sklearn.externals import joblib
 from keras import backend as K
+import string
+import re
+from nltk.corpus import stopwords
+from nltk.tokenize import TweetTokenizer
+
+cache_english_stopwords = set(stopwords.words('english'))
 
 import pickle
 
@@ -53,7 +59,8 @@ def lstm_model(max_branch_length, EMBEDDING_DIM, len_dataset):
     # TODO Dropout?
 
     model = Sequential()
-    model.add(LSTM(128, dropout=0.1, recurrent_dropout=0.1, return_sequences=True))                       # , input_shape=(max_branch_length, EMBEDDING_DIM)
+    model.add(Masking(mask_value=np.zeros(EMBEDDING_DIM)))
+    model.add(LSTM(100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True))                       # , input_shape=(max_branch_length, EMBEDDING_DIM)
     model.add(Activation('sigmoid'))
     model.add(TimeDistributed(Dense(_NUM_CLASSES, activation='softmax')))
 
@@ -248,12 +255,94 @@ def pad_y_datasets(max_branch_length, tr_y, ts_y, dv_y):
     return tr_y, ts_y, dv_y
 
 
+def word_preprocess(data):
+    """
+    preprocess words (remove nonalphabetic characters, convert all words to lower case)
+    :param data:
+    :return:
+    """
+    for i in range(len(data)):
+        for j in range(len(data[i])):
+            sent = data[i][j].lower()
+            data[i][j] = tweet_clean(sent)
+
+    return data
+
+
+def tweet_clean(tweet):
+    # Remove tickers
+    sent_no_tickers = re.sub(r'\$\w*', '', tweet)
+    tw_tknzr = TweetTokenizer(strip_handles=True, reduce_len=True)
+    temp_tw_list = tw_tknzr.tokenize(sent_no_tickers)
+    # Remove stopwords
+    list_no_stopwords = [i for i in temp_tw_list if i.lower() not in cache_english_stopwords]
+    # Remove hyperlinks
+    list_no_hyperlinks = [re.sub(r'https?:\/\/.*\/\w*', '', i) for i in list_no_stopwords]
+    # Remove hashtags
+    list_no_hashtags = [re.sub(r'#', '', i) for i in list_no_hyperlinks]
+    # Remove Punctuation and split 's, 't, 've with a space for filter
+    list_no_punctuation = [re.sub(r'[' + string.punctuation + ']+', ' ', i) for i in list_no_hashtags]
+    # Remove multiple whitespace
+    new_sent = ' '.join(list_no_punctuation)
+    # Remove any words with 2 or fewer letters
+    filtered_list = tw_tknzr.tokenize(new_sent)
+    list_filtered = [re.sub(r'^\w\w?$', '', i) for i in filtered_list]
+    filtered_sent = ' '.join(list_filtered)
+    clean_sent = re.sub(r'\s\s+', ' ', filtered_sent)
+    # Remove any whitespace at the front of the sentence
+    clean_sent = clean_sent.lstrip(' ')
+
+    return clean_sent
+
+
+def remove_padded_data(preds_test, y_test):
+    y_test2 = []
+    preds_test2 = []
+    for i in range(len(y_test)):
+        if y_test[i] != 'None':
+            y_test2.append(y_test[i])
+            preds_test2.append(preds_test[i])
+
+    return preds_test2, y_test2
+
+
+def remove_duplicated_data(preds_test, y_test, d_tw, dv_x):
+    x_test_text_branchifyed = []
+    for podatak in dv_x:
+        for sentence in podatak:
+            x_test_text_branchifyed.append(sentence)
+
+    dev = d_tw['dev']
+
+    x_test_text_original = []
+    for nesto in dev:
+        for tekst in nesto['replies']:
+            x_test_text_original.append(tweet_clean(tekst['text']))
+
+        x_test_text_original.append(tweet_clean(nesto['source']['text']))
+
+    y_test2 = []
+    preds_test2 = []
+    for i in range(len(y_test)):
+        if x_test_text_branchifyed[i] in x_test_text_original:
+            y_test2.append(y_test[i])
+            preds_test2.append(preds_test[i])
+            x_test_text_original.remove(x_test_text_branchifyed[i])
+
+    return preds_test2, y_test2
+
+
+
 if __name__ == "__main__":
 
-    d_tw = data.load_reddit_data()
+    d_tw = data.load_twitter_data()
     tr_x, tr_y, ts_x, ts_y, dv_x, dv_y = data.branchify_data(d_tw, data.branchify_reddit_extraction_loop)
 
     #################################################################################################################
+    tr_x = word_preprocess(tr_x)
+    ts_x = word_preprocess(ts_x)
+    dv_x = word_preprocess(dv_x)
+
     tr_x = np.asarray(tr_x)
     ts_x = np.asarray(ts_x)
     dv_x = np.asarray(dv_x)
@@ -295,6 +384,22 @@ if __name__ == "__main__":
     score = model.evaluate(branches_dev, dv_y, batch_size=128)
     print('model.evaluate', score)
 
-    y_pred = model.predict(branches_dev)
-    # y_pred = convert_pred_to_onehot(le, y_pred)
-    print('classification report:\n', classification_report(dv_y, y_pred))
+    print('branches_dev.shape', branches_dev.shape)
+    print('branches_train.shape', branches_train.shape)
+
+    # y_pred = model.predict(branches_dev)
+    # # y_pred = convert_pred_to_onehot(le, y_pred)
+    # print('classification report:\n', classification_report(dv_y, y_pred))
+
+    preds_test = model.predict(branches_dev, 100)
+    preds_test = [np.argmax(xx) for x in preds_test for xx in x]  # includes predictions for padded data
+    y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in dv_y for xx in
+              x]  # predictions for padded data added as str None
+    print(len(y_test))
+    print(accuracy_score(preds_test, y_test))
+
+    preds_test, y_test = remove_padded_data(preds_test, y_test)
+    preds_test, y_test = remove_duplicated_data(preds_test, y_test, d_tw, dv_x)
+
+    print(accuracy_score(preds_test, y_test))
+    print(preds_test)

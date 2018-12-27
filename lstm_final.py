@@ -246,17 +246,19 @@ def main():
 
     embeddings_index = make_embeddings_index()
 
-    x_train_temp = transform_data(tr_x, embeddings_index) 
+    x_train_temp = transform_data(tr_x, embeddings_index)
     y_train_temp = transform_labels(tr_y) 
 
-    x_test_temp = transform_data(dv_x, embeddings_index) 
+    x_test_temp = transform_data(dv_x, embeddings_index)
     y_test_temp = transform_labels(dv_y)
 
     twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
     #### feature engineering
     # for new_feature_f in [twitter_user_description_feature, twitter_user_id_feature, twitter_retweet_count_feature, twitter_profile_favourites_count, twitter_profile_use_background_image_feature, twitter_time_feature]:
-    for new_feature_f in [twitter_user_mention_count_feature]:
+    for new_feature_f in [twitter_previous_tweet_similarity_feature(x_train_temp, x_test_temp, y_train_temp,
+                                                                    y_test_temp, embeddings_index,
+                                                                    source_similarity=1)]:
         x_train, _, x_test = concat_features([new_feature_f], x_train_temp, None, x_test_temp, y_train_temp, None, y_test_temp)
         y_train = y_train_temp
         y_test = y_test_temp
@@ -279,7 +281,7 @@ def main():
         #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
         #y_train = [np.argmax(xx) for x in y_train for xx in x]
 
-        preds_test = model.predict(x_test, 100) 
+        preds_test = model.predict(x_test, 100)
         preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
         y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
         print('len(y_test)', len(y_test))
@@ -292,3 +294,5 @@ def main():
         print('preds_test', preds_test)
 
 main()
+
+# twitter only acc without new features 0.7483317445185891

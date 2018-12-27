@@ -1,9 +1,8 @@
 import pandas as pd
 import os
 
-_DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl
-                                                                        # are located
-
+# _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl are located
+_DATA_DIR ="/home/interferon/PycharmProjects/rumoureval19/rumour"
 # comments:
     # see main for usage examples
     # - what to do with ids that are not found (currently nothing, ignored, see first twitter training in

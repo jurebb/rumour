@@ -88,7 +88,7 @@ def branchify_twitter_extraction_loop(data, branches_texts, branches_labels):
 
 def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
     """Extract reddit posts from ids of branches"""
-
+    za_ispisati = True
     for source_text in data:
         ids_of_branches = source_text['branches']   # gives a list of branches ids from json structure
         for branch_ids in ids_of_branches:
@@ -105,7 +105,14 @@ def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
 
                 for reply in source_text['replies']:            # if the id in question is the reply of the source post
                     if reply['id_str'] == id:
-
+                        if za_ispisati:
+                            print(reply.keys())
+                            print('DATA user_reports')
+                            print(reply['data']['user_reports'])
+                            print()
+                            print('id_str')
+                            print(reply['id_str'])
+                            za_ispisati = False
                         branch_texts.append(reply['text'])
                         branch_labels.append(reply['label'])
 

@@ -2,16 +2,14 @@ from sequential.prepare_seq_data import *
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import numpy as np
 
-def twitter_length():
-    """
-    length of tweets in words
-    :return:
-    """
-    pass
-
 
 def scale(x_train, x_test):
-
+    """
+    Using standardScaler to scale new feature values
+    :param x_train:
+    :param x_test:
+    :return:
+    """
     x_train = np.asarray(x_train).reshape((-1, 1))
     x_test = np.asarray(x_test).reshape((-1, 1))
     ss = StandardScaler()
@@ -22,8 +20,14 @@ def scale(x_train, x_test):
 
     return x_train, x_test
 
-def scale2(x_train, x_test):
 
+def scale2(x_train, x_test):
+    """
+    Using minMaxScaler to scale new feature values
+    :param x_train:
+    :param x_test:
+    :return:
+    """
     x_train = np.asarray(x_train).reshape((-1, 1))
     x_test = np.asarray(x_test).reshape((-1, 1))
     ss = MinMaxScaler()
@@ -34,7 +38,14 @@ def scale2(x_train, x_test):
 
     return x_train, x_test
 
+
 def transform_description(description, embeddings_index):
+    """
+    transforming 'description' field of twitter user to word-embedding vector
+    :param description:
+    :param embeddings_index:
+    :return:
+    """
     x = []
     for sentence in description:
         suma = []
@@ -62,10 +73,11 @@ def transform_description(description, embeddings_index):
     x = np.asarray(x)
     return x
 
+
 def twitter_user_description_feature_(embeddings_index):
     def twitter_user_description_feature():
         """
-        extract user ids the same way text is extracted to be concatenated
+        extract twitter user description to be concatenated
         :return:
         """
         d_tw = load_twitter_data()
@@ -97,7 +109,7 @@ def twitter_user_id_feature():
 
 def twitter_retweet_count_feature():
     """
-    extract user ids the same way text is extracted to be concatenated
+    extract retweet count from twitter to be concatenated
     :return:
     """
     d_tw = load_twitter_data()
@@ -126,9 +138,10 @@ def twitter_favorite_count_feature():
 
     return tr_x_favorite_count, None, dv_x_favorite_count
 
+
 def twitter_profile_use_background_image_feature():
     """
-    extract user ids the same way text is extracted to be concatenated
+    extract whether user uses background image
     :return:
     """
     d_tw = load_twitter_data()
@@ -137,9 +150,10 @@ def twitter_profile_use_background_image_feature():
 
     return tr_x_profile_use_background_image, None, dv_x_profile_use_background_image
 
+
 def twitter_profile_favourites_count():
     """
-    extract user ids the same way text is extracted to be concatenated
+    extract user favourites
     :return:
     """
     d_tw = load_twitter_data()
@@ -150,9 +164,10 @@ def twitter_profile_favourites_count():
 
     return tr_x_profile_favourites_count, None, dv_x_profile_favourites_count
 
+
 def twitter_time_feature():
     """
-    extract user ids the same way text is extracted to be concatenated
+    extract post times
     :return:
     """
     d_tw = load_twitter_data()
@@ -162,6 +177,7 @@ def twitter_time_feature():
     tr_x_time, dv_x_time = scale(tr_x_time, dv_x_time)
 
     return tr_x_time, None, dv_x_time
+
 
 def branchify_twitter_extract_feature_loop(data, new_feature='retweet_count'):
     """Extract features from ids of branches"""
@@ -193,8 +209,52 @@ def branchify_twitter_extract_feature_loop(data, new_feature='retweet_count'):
     return branches_new_features
 
 
+def twitter_user_mention_contains_feature():
+    """
+    whether a tweet contains user mentions '@'
+    :return:
+    """
+    d_tw = load_twitter_data()
+    tr_x_texts = branchify_twitter_extract_entities_feature_loop(d_tw['train'], 'user_mentions')
+    dv_x_texts = branchify_twitter_extract_entities_feature_loop(d_tw['dev'], 'user_mentions')
+
+    for i in range(len(tr_x_texts)):
+        punctuations = 1 if len(tr_x_texts[i]) > 0 else 0
+        tr_x_texts[i] = punctuations
+
+    for i in range(len(dv_x_texts)):
+        punctuations = 1 if len(dv_x_texts[i]) > 0 else 0
+        dv_x_texts[i] = punctuations
+
+    tr_x_texts, dv_x_texts = scale(tr_x_texts, dv_x_texts)
+
+    return tr_x_texts, None, dv_x_texts
+
+
+def twitter_user_mention_count_feature():
+    """
+    count user mentions '@' in a tweet
+    :return:
+    """
+    d_tw = load_twitter_data()
+    tr_x_texts = branchify_twitter_extract_entities_feature_loop(d_tw['train'], 'user_mentions')
+    dv_x_texts = branchify_twitter_extract_entities_feature_loop(d_tw['dev'], 'user_mentions')
+
+    for i in range(len(tr_x_texts)):
+        punctuations = len(tr_x_texts[i])
+        tr_x_texts[i] = punctuations
+
+    for i in range(len(dv_x_texts)):
+        punctuations = len(dv_x_texts[i])
+        dv_x_texts[i] = punctuations
+
+    tr_x_texts, dv_x_texts = scale(tr_x_texts, dv_x_texts)
+
+    return tr_x_texts, None, dv_x_texts
+
+
 def branchify_twitter_extract_user_feature_loop(data, new_feature='profile_use_background_image'):
-    """Extract features from ids of branches"""
+    """Extract user features from ids of branches"""
     branches_new_features = []
     for source_new_feature in data:
         ids_of_branches = source_new_feature['branches']   # gives a list of branches ids from json structure
@@ -219,6 +279,36 @@ def branchify_twitter_extract_user_feature_loop(data, new_feature='profile_use_b
                         branches_new_features.append(reply['user'][new_feature])
 
             #branches_new_features.append(branch_new_features)
+
+    return branches_new_features
+
+
+def branchify_twitter_extract_entities_feature_loop(data, new_feature='hashtags'):
+    """Extract entities features from ids of branches"""
+    branches_new_features = []
+    for source_new_feature in data:
+        ids_of_branches = source_new_feature['branches']  # gives a list of branches ids from json structure
+        for branch_ids in ids_of_branches:
+            # branch_new_features = []
+
+            for id in branch_ids:
+                if source_new_feature['source']['id_str'] == id:  # if the id in question is the source post
+                    if source_new_feature['source']['id_str'] != str(source_new_feature['source']['id']):
+                        print(source_new_feature['source']['id_str'], source_new_feature['source']['id'])
+                        raise AssertionError("twitter source id_str and source id don't match for ", id)
+                    if source_new_feature['source']['id_str'] != source_new_feature['id']:
+                        raise AssertionError("twitter source id_str and id don't match for ", id)
+
+                    branches_new_features.append(source_new_feature['source']['entities'][new_feature])
+
+                for reply in source_new_feature['replies']:  # if the id in question is the reply of the source post
+                    if reply['id_str'] == id:
+                        if reply['id_str'] != str(reply['id']):
+                            raise AssertionError("twitter reply id_str and id don't match for ", id)
+
+                        branches_new_features.append(reply['entities'][new_feature])
+
+            # branches_new_features.append(branch_new_features)
 
     return branches_new_features
 
@@ -275,7 +365,6 @@ def branchify_twitter_extract_time_loop(data):
             #branches_new_features.append(branch_new_features)
 
     return branches_new_features
-
 
 
 def twitter_user_id_extraction_loop(data):

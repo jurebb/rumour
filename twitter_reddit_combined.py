@@ -29,18 +29,15 @@ seed(12)
 set_random_seed(22)
 
 _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"
-MAX_BRANCH_LENGTH = 24
+MAX_BRANCH_LENGTH = -1
 NUMBER_OF_CLASSES = 4
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 # GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
-def load_and_preprocces_twitter():
+def load_and_preprocces_twitter(MAX_BRANCH_LENGTH):
 
     d_tw = load_twitter_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
-
-    MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
-    print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH)
 
     embeddings_index = make_embeddings_index()
 
@@ -62,12 +59,9 @@ def load_and_preprocces_twitter():
 
     return x_train, x_test, y_train, y_test, len(y_test)
 
-def load_and_preprocces_reddit():
+def load_and_preprocces_reddit(MAX_BRANCH_LENGTH):
     d_tw = load_reddit_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_extraction_loop)
-
-    MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
-    print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH)
 
     embeddings_index = make_embeddings_index()
 
@@ -89,10 +83,10 @@ def load_and_preprocces_reddit():
 
     return x_train, x_test, y_train, y_test
 
-def combine_data():
+def combine_data(MAX_BRANCH_LENGTH):
 
-    x_train, x_test, y_train, y_test, len_twitter_test = load_and_preprocces_twitter()
-    x_train_reddit, x_test_reddit, y_train_reddit, y_test_reddit = load_and_preprocces_reddit()
+    x_train, x_test, y_train, y_test, len_twitter_test = load_and_preprocces_twitter(MAX_BRANCH_LENGTH)
+    x_train_reddit, x_test_reddit, y_train_reddit, y_test_reddit = load_and_preprocces_reddit(MAX_BRANCH_LENGTH)
 
     x_train = np.concatenate((x_train, x_train_reddit), axis=0)
     x_test = np.concatenate((x_test, x_test_reddit), axis=0)
@@ -101,9 +95,27 @@ def combine_data():
 
     return x_train, x_test, y_train, y_test, len_twitter_test
 
+def calculate_max_length():
+
+    d_tw = load_reddit_data()
+    tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_extraction_loop)
+
+    MAX_BRANCH_LENGTH_REDDIT = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
+    print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH_REDDIT)
+
+    d_tw = load_twitter_data()
+    tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
+
+    MAX_BRANCH_LENGTH_TWITTER = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
+    print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH_TWITTER)
+
+    return max([MAX_BRANCH_LENGTH_REDDIT, MAX_BRANCH_LENGTH_TWITTER])
+
+
 
 def main():
-    x_train, x_test, y_train, y_test, len_twitter_test = combine_data()
+    MAX_BRANCH_LENGTH = calculate_max_length()
+    x_train, x_test, y_train, y_test, len_twitter_test = combine_data(MAX_BRANCH_LENGTH)
 
     model = Sequential()
     model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))

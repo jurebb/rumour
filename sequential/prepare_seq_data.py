@@ -1,9 +1,8 @@
 import pandas as pd
 import os
 
-_DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl
-                                                                        # are located
-
+# _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl are located
+_DATA_DIR ="/home/interferon/PycharmProjects/rumoureval19/rumour"
 # comments:
     # see main for usage examples
     # - what to do with ids that are not found (currently nothing, ignored, see first twitter training in
@@ -18,7 +17,7 @@ def load_twitter_data():
     """Loads twitter dataset in twitter.pkl"""
 
     os.chdir(_DATA_DIR)
-    data = pd.read_pickle('twitter.pkl')
+    data = pd.read_pickle('twitter_new2.pkl')
 
     return data
 
@@ -27,7 +26,7 @@ def load_reddit_data():
     """Loads reddit dataset in reddit.pkl"""
 
     os.chdir(_DATA_DIR)
-    data = pd.read_pickle('reddit.pkl')
+    data = pd.read_pickle('reddit_new2.pkl')
 
     return data
 

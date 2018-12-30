@@ -106,7 +106,6 @@ def twitter_user_id_feature():
     return tr_x_username_ids, None, dv_x_username_ids
 
 
-
 def twitter_retweet_count_feature():
     """
     extract retweet count from twitter to be concatenated
@@ -120,7 +119,6 @@ def twitter_retweet_count_feature():
 
     return tr_x_retweet_count, None, dv_x_retweet_count
 
-    
 
 def twitter_favorite_count_feature():
     """

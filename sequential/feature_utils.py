@@ -14,6 +14,7 @@ from sequential.prepare_seq_data import *
 
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+NUMBER_OF_CLASSES = 4
 
 def class_to_onehot(y, max_y = None):
     if max_y == None:
@@ -39,7 +40,7 @@ def make_embeddings_index():
     return embeddings_index
 
 
-def transform_data(tr_x, embeddings_index):
+def transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH):
     x = []
     for podatak in tr_x:
         temp_podatak = []
@@ -76,7 +77,7 @@ def transform_data(tr_x, embeddings_index):
 
 
 
-def transform_labels(tr_y):
+def transform_labels(tr_y, MAX_BRANCH_LENGTH):
     from sklearn.externals import joblib
     le = joblib.load('le.pkl')
     y_train = []

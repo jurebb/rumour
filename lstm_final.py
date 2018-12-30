@@ -30,11 +30,10 @@ from tensorflow import set_random_seed
 seed(12)
 set_random_seed(22)
 
-MAX_BRANCH_LENGTH = 24
+MAX_BRANCH_LENGTH = -1
 NUMBER_OF_CLASSES = 4
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
-
 
 
 # region feature_selection
@@ -46,10 +45,10 @@ def fwd_feature_selection_twitter():
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
     MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
     embeddings_index = make_embeddings_index()
-    x_train_init = transform_data(tr_x, embeddings_index)
-    y_train_init = transform_labels(tr_y)
-    x_test_init = transform_data(dv_x, embeddings_index)
-    y_test_init = transform_labels(dv_y)
+    x_train_init = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH)
+    y_train_init = transform_labels(tr_y, MAX_BRANCH_LENGTH)
+    x_test_init = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH)
+    y_test_init = transform_labels(dv_y, MAX_BRANCH_LENGTH)
 
     twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
@@ -143,10 +142,10 @@ def all_subsets_feature_selection_twitter():
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
     MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
     embeddings_index = make_embeddings_index()
-    x_train_init = transform_data(tr_x, embeddings_index)
-    y_train_init = transform_labels(tr_y)
-    x_test_init = transform_data(dv_x, embeddings_index)
-    y_test_init = transform_labels(dv_y)
+    x_train_init = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH)
+    y_train_init = transform_labels(tr_y, MAX_BRANCH_LENGTH)
+    x_test_init = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH)
+    y_test_init = transform_labels(dv_y, MAX_BRANCH_LENGTH)
 
     twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
@@ -252,15 +251,15 @@ def main():
     # tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_extraction_loop)
 
     MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
-    print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH)
+    print('computed MAX_BRANCH_LENGTH =', MAX_BRANCH_LENGTH)
 
     embeddings_index = make_embeddings_index()
 
-    x_train_temp = transform_data(tr_x, embeddings_index) 
-    y_train_temp = transform_labels(tr_y) 
+    x_train_temp = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH) 
+    y_train_temp = transform_labels(tr_y, MAX_BRANCH_LENGTH) 
 
-    x_test_temp = transform_data(dv_x, embeddings_index) 
-    y_test_temp = transform_labels(dv_y)
+    x_test_temp = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH) 
+    y_test_temp = transform_labels(dv_y, MAX_BRANCH_LENGTH)
 
     twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 

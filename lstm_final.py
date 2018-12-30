@@ -21,6 +21,7 @@ from itertools import combinations
 
 from sequential.prepare_seq_data import *
 from sequential.additional_features import *
+from sequential.additional_features_reddit import *
 from sequential.additional_computed_features import *
 
 from numpy.random import seed
@@ -449,27 +450,26 @@ def main():
     d_tw = load_twitter_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
 
+    # d_tw = load_reddit_data()
+    # tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_extraction_loop)
+
     MAX_BRANCH_LENGTH = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
     print('computed MAX_BRANCH_LENGTH=', MAX_BRANCH_LENGTH)
 
     embeddings_index = make_embeddings_index()
 
-    x_train_temp = transform_data(tr_x, embeddings_index)
+    x_train_temp = transform_data(tr_x, embeddings_index) 
     y_train_temp = transform_labels(tr_y) 
 
-    x_test_temp = transform_data(dv_x, embeddings_index)
+    x_test_temp = transform_data(dv_x, embeddings_index) 
     y_test_temp = transform_labels(dv_y)
 
     twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
     #### feature engineering
-    # for new_feature_f in [twitter_user_description_feature, twitter_user_id_feature, twitter_retweet_count_feature, twitter_profile_favourites_count, twitter_profile_use_background_image_feature, twitter_time_feature]:
-    for new_feature_f in [twitter_previous_tweet_similarity_feature(x_train_temp, x_test_temp, y_train_temp,
-                                                                    y_test_temp, embeddings_index,
-                                                                    source_similarity=1)]:
-        # x_train, _, x_test = concat_features([new_feature_f], x_train_temp, None, x_test_temp, y_train_temp, None, y_test_temp)
-        x_train = x_train_temp
-        x_test = x_test_temp
+    # for new_feature_f in [reddit_kind_feature, reddit_used_feature, reddit_id_str_feature, reddit_score_feature, reddit_controversiality_feature]:
+    for new_feature_f in [twitter_user_mention_count_feature]:
+        x_train, _, x_test = concat_features([new_feature_f], x_train_temp, None, x_test_temp, y_train_temp, None, y_test_temp)
         y_train = y_train_temp
         y_test = y_test_temp
         print('x_train.shape', x_train.shape)
@@ -491,7 +491,7 @@ def main():
         #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
         #y_train = [np.argmax(xx) for x in y_train for xx in x]
 
-        preds_test = model.predict(x_test, 100)
+        preds_test = model.predict(x_test, 100) 
         preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
         y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
         print('len(y_test)', len(y_test))
@@ -503,7 +503,4 @@ def main():
         print('accuracy_score(preds_test, y_test) after removing padded/duplicated', accuracy_score(preds_test, y_test))
         print('preds_test', preds_test)
 
-all_subsets_feature_selection_twitter()
-
-# twitter only acc without new features 0.7483317445185891
-# twitter_new2 only acc without new features 0.7502383222116301
+main()

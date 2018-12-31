@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 
-_DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl are located
-#_DATA_DIR ="/home/interferon/PycharmProjects/rumoureval19/rumour"
+# _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl are located
+_DATA_DIR ="/home/interferon/PycharmProjects/rumoureval19/rumour"
 # comments:
     # see main for usage examples
     # - what to do with ids that are not found (currently nothing, ignored, see first twitter training in
@@ -97,7 +97,7 @@ def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
             for id in branch_ids:
                 if source_text['source']['id_str'] == id:       # if the id in question is the source post
                     if source_text['source']['id_str'] != source_text['id']:
-                        raise AssertionError("twitter source id_str and id don't match for ", id)
+                        raise AssertionError("reddit source id_str and id don't match for ", id)
 
                     branch_texts.append(source_text['source']['text'])
                     branch_labels.append(source_text['source']['label'])

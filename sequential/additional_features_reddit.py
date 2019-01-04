@@ -147,12 +147,18 @@ def branchify_reddit_extract_feature_from_data_loop(data, new_feature='likes'):
                 if source_text['source']['id_str'] == id:       # if the id in question is the source post
                     if source_text['source']['id_str'] != source_text['id']:
                         raise AssertionError("twitter source id_str and id don't match for ", id)
-                    branches_new_feature.append(source_text['source']['data']['children'][0]['data'][new_feature])
+                    if source_text['source']['data']['children'][0]['data'][new_feature] != None:
+                        branches_new_feature.append(source_text['source']['data']['children'][0]['data'][new_feature])
+                    else:
+                        branches_new_feature.append(0)
 
                 for reply in source_text['replies']:            # if the id in question is the reply of the source post
                     if reply['id_str'] == id:
                         try:
-                            branches_new_feature.append(reply['data'][new_feature])
+                            if reply['data'][new_feature] != None:
+                                branches_new_feature.append(reply['data'][new_feature])
+                            else:
+                                branches_new_feature.append(0) 
                         except KeyError:
                             branches_new_feature.append(0) #SUMNJIVO
     return branches_new_feature

@@ -9,8 +9,10 @@ from keras.preprocessing.sequence import pad_sequences
 
 import os
 from itertools import combinations
+from sklearn.preprocessing import LabelEncoder
 
 from sequential.prepare_seq_data import *
+from sklearn.externals import joblib
 
 # GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
@@ -78,7 +80,6 @@ def transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH):
 
 
 def transform_labels(tr_y, MAX_BRANCH_LENGTH):
-    from sklearn.externals import joblib
     le = joblib.load('le.pkl')
     y_train = []
     for yy in tr_y:
@@ -94,6 +95,17 @@ def transform_labels(tr_y, MAX_BRANCH_LENGTH):
         y_train.append(temp)
     y_train = np.asarray(y_train)
     return y_train
+
+
+def transform_labels_source(y_train, y_test, number_of_classes=3):
+    le = LabelEncoder()
+    y_train_new = le.fit_transform(y_train)
+    y_test_new = le.transform(y_test)
+
+    y_train_new = class_to_onehot(y_train_new, number_of_classes-1)
+    y_test_new = class_to_onehot(y_test_new, number_of_classes-1)
+
+    return y_train_new, y_test_new
 
 
 def remove_padded_data(preds_test, y_test):

@@ -69,6 +69,66 @@ def print_structure_example():
     pass
 
 
+def branchify_twitter_taskb_extraction_loop(data, branches_texts, branches_labels):
+    """Extract tweets from ids of branches"""
+
+    for source_text in data:
+        ids_of_branches = source_text['branches']   # gives a list of branches ids from json structure
+        for branch_ids in ids_of_branches:
+            branch_texts = []
+
+            for id in branch_ids:
+                if source_text['source']['id_str'] == id:       # if the id in question is the source post
+                    if source_text['source']['id_str'] != str(source_text['source']['id']):
+                        print(source_text['source']['id_str'], source_text['source']['id'])
+                        raise AssertionError("twitter source id_str and source id don't match for ", id)
+                    if source_text['source']['id_str'] != source_text['id']:
+                        raise AssertionError("twitter source id_str and id don't match for ", id)
+
+                    branch_texts.append(source_text['source']['text'])
+
+                for reply in source_text['replies']:            # if the id in question is the reply of the source post
+                    if reply['id_str'] == id:
+                        if reply['id_str'] != str(reply['id']):
+                            raise AssertionError("twitter reply id_str and id don't match for ", id)
+
+                        branch_texts.append(reply['text'])
+
+            branches_texts.append(branch_texts)
+            branches_labels.append(source_text['veracity'])
+
+
+def branchify_reddit_taskb_extraction_loop(data, branches_texts, branches_labels):
+    """Extract reddit posts from ids of branches"""
+    za_ispisati = True
+    for source_text in data:
+        ids_of_branches = source_text['branches']   # gives a list of branches ids from json structure
+        for branch_ids in ids_of_branches:
+            branch_texts = []
+
+            for id in branch_ids:
+                if source_text['source']['id_str'] == id:       # if the id in question is the source post
+                    if source_text['source']['id_str'] != source_text['id']:
+                        raise AssertionError("reddit source id_str and id don't match for ", id)
+
+                    branch_texts.append(source_text['source']['text'])
+
+                for reply in source_text['replies']:            # if the id in question is the reply of the source post
+                    if reply['id_str'] == id:
+                        if za_ispisati:
+                            print(reply.keys())
+                            print('DATA user_reports')
+                            print(reply['data']['user_reports'])
+                            print()
+                            print('id_str')
+                            print(reply['id_str'])
+                            za_ispisati = False
+                        branch_texts.append(reply['text'])
+
+            branches_texts.append(branch_texts)
+            branches_labels.append(source_text['veracity'])
+
+
 if __name__ == "__main__":
 
     print_structure_example()

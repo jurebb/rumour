@@ -25,6 +25,7 @@ from sequential.additional_features_reddit import *
 from sequential.additional_computed_features import *
 from sequential.feature_utils import *
 from task_b.prepare_data import *
+from task_b.sdqc_model import *
 from sklearn.externals import joblib
 
 from numpy.random import seed
@@ -45,31 +46,37 @@ def main():
     # d_tw = load_reddit_data()
     # tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_taskb_extraction_loop)
 
+    ##########################################################################################################
+    # this is simply for original branch y_train and y_test values
+    tr_x_b, tr_y_b, _, _, dv_x_b, dv_y_b = branchify_data(d_tw, branchify_twitter_extraction_loop)
+    MAX_BRANCH_LENGTH = max(len(max(dv_x_b, key=len)), len(max(tr_x_b, key=len)))
+    print('computed MAX_BRANCH_LENGTH =', MAX_BRANCH_LENGTH)
+    y_train_b = transform_labels(tr_y_b, MAX_BRANCH_LENGTH)
+    y_test_b = transform_labels(dv_y_b, MAX_BRANCH_LENGTH)
+    ##########################################################################################################
+
     MAX_BRANCH_LENGTH_task_b = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
     print('computed MAX_BRANCH_LENGTH_task_b=', MAX_BRANCH_LENGTH_task_b)
 
     embeddings_index = make_embeddings_index()
 
-    x_train_temp = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
-    # y_train_temp = transform_labels(tr_y, MAX_BRANCH_LENGTH_task_b)
-
-    x_test_temp = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
-    # y_test_temp = transform_labels(dv_y, MAX_BRANCH_LENGTH_task_b)
-
-    twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
+    x_train = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
+    x_test = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
 
     #### feature engineering
-    # for new_feature_f in [reddit_kind_feature, reddit_used_feature, reddit_id_str_feature, reddit_score_feature, reddit_controversiality_feature]:
-    # for new_feature_f in [twitter_user_mention_count_feature]:
-    #     x_train, _, x_test = concat_features([new_feature_f], x_train_temp, None, x_test_temp, y_train_temp, None, y_test_temp)
-        # y_train = y_train_temp
-        # y_test = y_test_temp
-        # print('x_train.shape', x_train.shape)
+    for new_feature_f in [twitter_favorite_count_feature, twitter_retweet_count_feature,
+                          twitter_punctuation_count_feature('?'),
+                          twitter_word_counter_feature, twitter_url_counter_feature,
+                          twitter_previous_tweet_similarity_feature(x_train, x_test, y_train_b, y_test_b, embeddings_index),
+                          twitter_user_mention_count_feature,
+                          kfold_feature
+                          ]:
+        x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train_b,
+                                             None, y_test_b)
+        print('x_train.shape', x_train.shape)
 
     ####
 
-    x_train = x_train_temp
-    x_test = x_test_temp
     y_train = tr_y
     y_test = dv_y
 
@@ -90,8 +97,12 @@ def main():
 
     preds_test = model.predict(x_test, 100)
     print('preds_test', preds_test)
-    preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
+    preds_test = [np.argmax(xx) for xx in preds_test]   #includes predictions for padded data
+    print('len(preds_test)', len(preds_test))
+    print('preds_test[0]', preds_test[0])
+    y_test = [np.argmax(yy) for yy in y_test]
     print('len(y_test)', len(y_test))
+    print('y_test[0]', y_test[0])
     print('accuracy_score(preds_test, y_test)', accuracy_score(preds_test, y_test))
 
 

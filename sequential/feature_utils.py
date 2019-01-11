@@ -14,8 +14,8 @@ from sklearn.preprocessing import LabelEncoder
 from sequential.prepare_seq_data import *
 from sklearn.externals import joblib
 
-# GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
-GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
+#  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 NUMBER_OF_CLASSES = 4
 
 def class_to_onehot(y, max_y = None):
@@ -80,6 +80,7 @@ def transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH):
 
 
 def transform_labels(tr_y, MAX_BRANCH_LENGTH):
+    from sklearn.externals import joblib
     le = joblib.load('le.pkl')
     y_train = []
     for yy in tr_y:

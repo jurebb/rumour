@@ -129,7 +129,8 @@ def baseline_twitter_train_dev():
 
     rf.fit(x, y)
     pred = rf.predict(x_dev)
-    print(len(pred))
+    print('len(x_train)', x.shape[0])
+    print('len(pred)', len(pred))
     print('acc', accuracy_score(y_dev, pred))
     print(pred)
 

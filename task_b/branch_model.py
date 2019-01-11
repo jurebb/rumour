@@ -98,9 +98,11 @@ def main():
     preds_test = model.predict(x_test, 100)
     print('preds_test', preds_test)
     preds_test = [np.argmax(xx) for xx in preds_test]   #includes predictions for padded data
+    print('preds_test', preds_test)
     print('len(preds_test)', len(preds_test))
     print('preds_test[0]', preds_test[0])
     y_test = [np.argmax(yy) for yy in y_test]
+    print('y_test', y_test)
     print('len(y_test)', len(y_test))
     print('y_test[0]', y_test[0])
     print('accuracy_score(preds_test, y_test)', accuracy_score(preds_test, y_test))

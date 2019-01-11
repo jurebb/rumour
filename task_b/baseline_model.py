@@ -27,6 +27,23 @@ def baseline_model_tfidf():
     y_train = np.concatenate((tr_y, rtr_y), axis=0)
     y_test = np.concatenate((dv_y, rdv_y), axis=0)
 
+    count_train = {}
+    count_train['true'] = 0
+    count_train['false'] = 0
+    count_train['unverified'] = 0
+    for y in y_train:
+        count_train[y] += 1
+
+    count_test = {}
+    count_test['true'] = 0
+    count_test['false'] = 0
+    count_test['unverified'] = 0
+    for y in y_test:
+        count_test[y] += 1
+
+    print('count train', count_train)
+    print('count test', count_test)
+
     print('x_train.shape', x_train.shape)
     print('x_test.shape', x_test.shape)
     print('y_train.shape', y_train.shape)

@@ -3,7 +3,8 @@ from sequential.feature_utils import *
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
-
+from task_b.sdqc_model import kfold_for_baseline_feature
+import numpy as np
 
 def baseline_model_emb():
     d_tw = load_twitter_data()
@@ -16,9 +17,14 @@ def baseline_model_emb():
 
 
 def baseline_model_tfidf():
+
+    meta_train, _, meta_test = kfold_for_baseline_feature()
+    print(len(meta_train))
+
     d_tw = load_twitter_data()
     tr_x, tr_y, ts_x, ts_y, dv_x, dv_y = sourcify_data(d_tw, source_tweet_extraction_loop)
 
+    '''
     d_rd = load_reddit_data()
     rtr_x, rtr_y, rts_x, rts_y, rdv_x, rdv_y = sourcify_data(d_rd, source_reddit_extraction_loop)
 
@@ -26,6 +32,20 @@ def baseline_model_tfidf():
     x_test = np.concatenate((dv_x, rdv_x), axis=0)
     y_train = np.concatenate((tr_y, rtr_y), axis=0)
     y_test = np.concatenate((dv_y, rdv_y), axis=0)
+    '''
+
+    tfidf = TfidfVectorizer()
+    tr_x = tfidf.fit_transform(tr_x).todense()
+    dv_x = tfidf.transform(dv_x).todense()
+
+    print(tr_x.shape)
+    
+    #x_train = np.concatenate((tr_x, meta_train), axis=1)
+    #x_test = np.concatenate((dv_x, meta_test), axis=1)
+    x_train = np.asarray(tr_x)
+    x_test = np.asarray(dv_x)
+    y_train = np.asarray(tr_y)
+    y_test = np.asarray(dv_y)
 
     count_train = {}
     count_train['true'] = 0
@@ -48,10 +68,6 @@ def baseline_model_tfidf():
     print('x_test.shape', x_test.shape)
     print('y_train.shape', y_train.shape)
     print('y_test.shape', y_test.shape)
-
-    tfidf = TfidfVectorizer()
-    x_train = tfidf.fit_transform(x_train)
-    x_test = tfidf.transform(x_test)
 
     rf = RandomForestClassifier(n_estimators=20)
 

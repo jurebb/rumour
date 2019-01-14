@@ -11,8 +11,10 @@ from sklearn.metrics import accuracy_score
 
 from sequential.additional_computed_features import *
 from sequential.feature_utils import *
+from .prepare_data import *
 
 from numpy.random import seed
+import numpy as np
 from tensorflow import set_random_seed
 seed(12)
 set_random_seed(22)
@@ -21,7 +23,7 @@ MAX_BRANCH_LENGTH = -1
 NUMBER_OF_CLASSES = 4
 
 
-def kfold_feature():
+def kfold_feature(reshape_preds=True):
     d_tw = load_twitter_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
 
@@ -83,7 +85,10 @@ def kfold_feature():
 
     preds_train_meta = np.asarray(preds_train_meta)
     # preds_train_meta = np.reshape(preds_train_meta, (-1, preds_train_meta[0].shape[1], preds_train_meta[0].shape[2]))
-    preds_train_meta = np.reshape(preds_train_meta, (-1, preds_train_meta[0].shape[2]))
+    if reshape_preds:
+        preds_train_meta = np.reshape(preds_train_meta, (-1, preds_train_meta[0].shape[2]))
+    else:
+        preds_train_meta = np.reshape(preds_train_meta, (-1, preds_train_meta[0].shape[1], preds_train_meta[0].shape[2]))
 
     model = Sequential()
     model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True,
@@ -96,14 +101,65 @@ def kfold_feature():
     model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
 
     preds_test_meta = model.predict(x_test, 100)
-    preds_test_meta = np.reshape(preds_test_meta, (-1, preds_test_meta.shape[2]))
 
-    preds_train_meta = [np.argmax(xx) for xx in preds_train_meta]
-    preds_test_meta = [np.argmax(xx) for xx in preds_test_meta]
+    if reshape_preds:
+        preds_test_meta = np.reshape(preds_test_meta, (-1, preds_test_meta.shape[2]))
 
-    preds_train_meta, preds_test_meta = scale(preds_train_meta, preds_test_meta)
+    #preds_train_meta = [np.argmax(xx) for xx in preds_train_meta]
+    #preds_test_meta = [np.argmax(xx) for xx in preds_test_meta]
+
+    #preds_train_meta, preds_test_meta = scale(preds_train_meta, preds_test_meta)
 
     return preds_train_meta, None, preds_test_meta
+
+
+def kfold_for_baseline_feature():
+    preds_train_meta, _, preds_test_meta = kfold_feature(False)
+
+    print(preds_train_meta.shape)
+    print(preds_test_meta.shape)
+
+    d_tw = load_twitter_data()
+    tr_x, tr_y, ts_x, ts_y, dv_x, dv_y = sourcify_data(d_tw, source_tweet_extraction_loop)
+
+    '''
+    embeddings_index = make_embeddings_index()
+    MAX_BRANCH_LENGTH_task_b = max(len(max(dv_x, key=len)), len(max(tr_x, key=len)))
+    x_train = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
+    x_test = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
+    '''
+
+    xx_prev0 = None
+    meta_train = []
+    new_meta = np.zeros(4)
+    br = 0
+    for i, xx in enumerate(tr_x):
+        if i != 0 and xx != xx_prev0:
+            meta_train.append(new_meta / br)
+            new_meta = np.zeros(4)
+            br = 0
+        for p in preds_train_meta[i]:
+            new_meta += p
+            br += 1
+        xx_prev0 = xx
+    meta_train.append(new_meta / br)
+
+    xx_prev0 = None
+    meta_test = []
+    new_meta = np.zeros(4)
+    br = 0
+    for i, xx in enumerate(dv_x):
+        if i != 0 and xx != xx_prev0:
+            meta_test.append(new_meta / br)
+            new_meta = np.zeros(4)
+            br = 0
+        for p in preds_test_meta[i]:
+            new_meta += p
+            br += 1
+        xx_prev0 = xx
+    meta_test.append(new_meta / br)
+
+    return meta_train, None, meta_test
 
 
 if __name__ == "__main__":

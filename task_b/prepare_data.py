@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 
-# _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl are located
-_DATA_DIR ="/home/interferon/PycharmProjects/rumoureval19/rumour"
+_DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"      # directory where twitter.pkl and reddit.pkl are located
+#  _DATA_DIR ="/home/interferon/PycharmProjects/rumoureval19/rumour"
 
 
 def load_twitter_data():

@@ -64,17 +64,12 @@ def main():
     x_test = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH_task_b)
 
     #### feature engineering
-    for new_feature_f in [twitter_favorite_count_feature, twitter_retweet_count_feature,
-                          twitter_punctuation_count_feature('?'),
-                          twitter_word_counter_feature, twitter_url_counter_feature,
-                          twitter_previous_tweet_similarity_feature(x_train, x_test, y_train_b, y_test_b, embeddings_index),
-                          twitter_user_mention_count_feature,
-                          kfold_feature
-                          ]:
+    
+    for new_feature_f in [kfold_feature]:
         x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train_b,
                                              None, y_test_b)
         print('x_train.shape', x_train.shape)
-
+    
     ####
 
     y_train = tr_y
@@ -83,7 +78,7 @@ def main():
     print('x_train.shape', x_train.shape)
 
     model = Sequential()
-    model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(Bidirectional(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=False), input_shape=(x_train.shape[1], x_train.shape[2])))
     model.add(Activation('sigmoid'))
     model.add(Dense(NUMBER_OF_CLASSES_task_b))
     model.add(Activation('softmax'))
@@ -106,6 +101,26 @@ def main():
     print('len(y_test)', len(y_test))
     print('y_test[0]', y_test[0])
     print('accuracy_score(preds_test, y_test)', accuracy_score(preds_test, y_test))
+
+    xx_prev0 = None
+    br = 0
+    preds_test2 = []
+    y_test2 = []
+    #  predictions for the same source will be printed and separated by newline
+    for i, xx in enumerate(x_test):
+        if (xx[0][:200] != xx_prev0).any():
+            br += 1
+            preds_test2.append(preds_test[i])
+            y_test2.append(y_test[i])
+            print()
+        else:
+            print(y_test[i])
+        
+        xx_prev0 = xx[0][:200]
+
+    print('br: ', br)
+    print('len: ', len(preds_test2))
+    print('real accuracy_score(preds_test, y_test)', accuracy_score(preds_test2, y_test2))
 
 
 main()

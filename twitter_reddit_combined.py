@@ -33,8 +33,8 @@ _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"
 MAX_BRANCH_LENGTH = -1
 NUMBER_OF_CLASSES = 4
 #GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.840B.300d\\glove.840B.300d.txt'
-GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
-#  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+# GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
+GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
 def load_and_preprocces_twitter(MAX_BRANCH_LENGTH):
 
@@ -167,7 +167,8 @@ def lstm_hyperparameters():
     print('units, dropout, recurrent_dropout, lr, nb_epoch')
     print(best_params)
 
-def main():
+
+def get_predictions_combined():
     MAX_BRANCH_LENGTH = calculate_max_length()
     x_train, x_test, y_train, y_test, len_twitter_test = combine_data(MAX_BRANCH_LENGTH)
 
@@ -228,4 +229,54 @@ def main():
     print('accuracy_score(preds_test_reddit, y_test_reddit) after removing padded/duplicated', accuracy_score(preds_test_reddit, y_test_reddit))
     print('preds_test_reddit', preds_test_reddit)
 
-main()
+    return preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit
+
+
+def submit_json_dev():
+    preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined()
+
+    data = pd.read_pickle('twitter_new2.pkl')
+
+    x_id_tw = []
+
+    for base_text in data['dev']:
+        x_id_tw.append(base_text['source']['id'])
+
+        for reply in base_text['replies']:
+            if pd.notnull(reply['text']) and reply['text'] != '[deleted]' and reply['text'] != '[removed]':
+                x_id_tw.append(reply['id'])
+
+    data = pd.read_pickle('reddit_new2.pkl')
+
+    x_id_rd = []
+
+    print('data.keys()', data.keys())
+    print('data[test][0].keys()', data['dev'][0].keys())
+    for base_text in data['dev']:
+        x_id_rd.append(base_text['source']['id_str'])
+
+        for reply in base_text['replies']:
+            # if pd.notnull(reply['text']) and reply['text'] != '[deleted]' and reply['text'] != '[removed]':
+            x_id_rd.append(reply['id_str'])
+
+    submit_dict_taskaenglish = dict()
+
+    for i in range(len(x_id_tw)):
+        submit_dict_taskaenglish[x_id_tw[i]] = preds_test_twitter[i]
+    for i in range(len(x_id_rd)):
+        submit_dict_taskaenglish[x_id_rd[i]] = preds_test_reddit[i]
+
+    print('len(x_id_rd)', len(x_id_rd))
+    print('len(preds_test_reddit)', len(preds_test_reddit))
+
+
+    assert len(x_id_tw) == len(preds_test_twitter)
+    assert len(x_id_rd) == len(preds_test_reddit)
+
+    submit_dict_taskaenglish = json.dumps(submit_dict_taskaenglish)
+    file = open('answer', 'w')
+    file.write(submit_dict_taskaenglish)
+
+
+if __name__ == "__main__":
+    submit_json_dev()

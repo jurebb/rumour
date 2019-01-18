@@ -33,8 +33,8 @@ _DATA_DIR = "C:\\Users\\viktor\\Projects\\Python\\data_set\\data"
 MAX_BRANCH_LENGTH = -1
 NUMBER_OF_CLASSES = 4
 #GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.840B.300d\\glove.840B.300d.txt'
-# GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
-GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
+#  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
 def load_and_preprocces_twitter(MAX_BRANCH_LENGTH):
 
@@ -261,6 +261,10 @@ def submit_json_dev():
 
     submit_dict_taskaenglish = dict()
 
+    le = joblib.load('le.pkl')
+    preds_test_twitter = le.inverse_transform(preds_test_twitter)
+    preds_test_reddit = le.inverse_transform(preds_test_reddit)
+
     for i in range(len(x_id_tw)):
         submit_dict_taskaenglish[x_id_tw[i]] = preds_test_twitter[i]
     for i in range(len(x_id_rd)):
@@ -269,13 +273,15 @@ def submit_json_dev():
     print('len(x_id_rd)', len(x_id_rd))
     print('len(preds_test_reddit)', len(preds_test_reddit))
 
-
     assert len(x_id_tw) == len(preds_test_twitter)
     assert len(x_id_rd) == len(preds_test_reddit)
 
     submit_dict_taskaenglish = json.dumps(submit_dict_taskaenglish)
-    file = open('answer', 'w')
-    file.write(submit_dict_taskaenglish)
+    f = open('answer', 'w')
+    f.write('blin')
+    f.write(submit_dict_taskaenglish)
+
+    print(submit_dict_taskaenglish)
 
 
 if __name__ == "__main__":

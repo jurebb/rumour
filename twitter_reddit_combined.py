@@ -232,7 +232,7 @@ def get_predictions_combined():
     return preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit
 
 
-def submit_json_dev():
+def submit_task_a():
     preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined()
 
     data = pd.read_pickle('twitter_new2.pkl')
@@ -276,13 +276,31 @@ def submit_json_dev():
     assert len(x_id_tw) == len(preds_test_twitter)
     assert len(x_id_rd) == len(preds_test_reddit)
 
-    submit_dict_taskaenglish = json.dumps(submit_dict_taskaenglish)
-    f = open('answer', 'w')
-    f.write('blin')
-    f.write(submit_dict_taskaenglish)
+    # submit_dict_taskaenglish = json.dumps(submit_dict_taskaenglish)
+    # f = open('answer', 'w')
+    # f.write('blin')
+    # f.write(submit_dict_taskaenglish)
+    #
+    # print('submit_dict_taskaenglish', submit_dict_taskaenglish)
 
-    print(submit_dict_taskaenglish)
+    return submit_dict_taskaenglish
+
+
+def submit_task_a_json():
+    submit_dict_taskaenglish = submit_task_a()
+
+    final_json = dict()
+    final_json['subtaskaenglish'] = submit_dict_taskaenglish
+    final_json['subtaskbenglish'] = None
+    final_json['subtaskadanish'] = None
+    final_json['subtaskbdanish'] = None
+    final_json['subtaskarussian'] = None
+    final_json['subtaskbrussian'] = None
+
+    f = open('answer.json', 'w')
+    final_json = json.dumps(final_json)
+    f.write(final_json)
 
 
 if __name__ == "__main__":
-    submit_json_dev()
+    submit_task_a_json()

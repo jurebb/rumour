@@ -13,6 +13,8 @@ from keras.preprocessing.sequence import pad_sequences
 import os
 from keras.layers import Bidirectional
 
+import keras
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -35,6 +37,46 @@ NUMBER_OF_CLASSES = 4
 #GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.840B.300d\\glove.840B.300d.txt'
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+
+
+def calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH):
+    """for sample_weights in keras, because metric now is f1 and dataset is highly unbalanced"""
+
+    classes_count = dict()
+
+    counter_all = 0
+
+    for branch in y_train:
+        for timestep in branch:
+            if str(timestep) not in classes_count.keys():
+                classes_count[str(timestep)] = 0
+            else:
+                classes_count[str(timestep)] += 1
+
+            counter_all += 1
+
+    class_weights = dict()
+    sorted_keys = sorted(classes_count.keys())
+    for key in sorted_keys:
+        # class_weights[key] = (1 - (classes_count[key] / counter_all)) # * 10
+        class_weights[key] = (counter_all / 5 * classes_count[key])
+
+    ##### label DENY to high weight
+    # class_weights['[0. 0. 0. 1.]'] = 5
+    print('class_weights', class_weights)
+    #####
+
+    y_weights = []
+    for branch in y_train:
+        branch_weigths = []
+        for timestep in branch:
+            branch_weigths.append(class_weights[str(timestep)])
+
+        y_weights.append(np.asarray(branch_weigths))
+
+    return np.asarray(y_weights)
+
+
 
 def load_and_preprocces_twitter(MAX_BRANCH_LENGTH):
 
@@ -162,25 +204,32 @@ def lstm_hyperparameters():
                         if acc_score > best_acc:
                             best_acc = acc_score
                             best_params = [units, dropout, recurrent_dropout, lr, nb_epoch]
+
+                        keras.backend.clear_session()
+
     print('FINAL ACC')
     print(best_acc)
     print('units, dropout, recurrent_dropout, lr, nb_epoch')
     print(best_params)
 
 
-def get_predictions_combined():
+def get_predictions_combined_task_a():
     MAX_BRANCH_LENGTH = calculate_max_length()
     x_train, x_test, y_train, y_test, len_twitter_test = combine_data(MAX_BRANCH_LENGTH)
 
+    sample_weights = calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH)
+
     model = Sequential()
-    model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True,
+                   input_shape=(x_train.shape[1], x_train.shape[2])))
     model.add(Activation('sigmoid'))
     model.add(TimeDistributed(Dense(NUMBER_OF_CLASSES)))
     model.add(Activation('softmax'))
 
     adam = Adam(lr=0.001)
-    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
+    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'], sample_weight_mode='temporal',
+                  )
+    model.fit(x_train, y_train, nb_epoch=8, batch_size=64, sample_weight=sample_weights)  # nb_epoch=50
 
     #preds_train = model.predict(x_train, 100)
     #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
@@ -233,7 +282,7 @@ def get_predictions_combined():
 
 
 def submit_task_a():
-    preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined()
+    preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined_task_a()
 
     data = pd.read_pickle('twitter_new2.pkl')
 
@@ -297,7 +346,7 @@ def submit_task_a_json():
     final_json['subtaskarussian'] = None
     final_json['subtaskbrussian'] = None
 
-    f = open('answer.json', 'w')
+    f = open('answer3.json', 'w')
     final_json = json.dumps(final_json)
     f.write(final_json)
 

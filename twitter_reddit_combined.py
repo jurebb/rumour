@@ -14,7 +14,7 @@ import os
 from keras.layers import Bidirectional
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from sequential.prepare_seq_data import *
@@ -36,7 +36,7 @@ NUMBER_OF_CLASSES = 4
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
-def load_and_preprocces_twitter(MAX_BRANCH_LENGTH):
+def load_and_preprocces_twitter(MAX_BRANCH_LENGTH, add_features):
 
     d_tw = load_twitter_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
@@ -50,21 +50,21 @@ def load_and_preprocces_twitter(MAX_BRANCH_LENGTH):
     y_test = transform_labels(dv_y, MAX_BRANCH_LENGTH)
 
     #twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
+    if add_features:
+        #### feature engineering
+        for new_feature_f in [twitter_favorite_count_feature, twitter_retweet_count_feature, twitter_punctuation_count_feature('?'), 
+                twitter_word_counter_feature, twitter_url_counter_feature, 
+                twitter_previous_tweet_similarity_feature(x_train, x_test, y_train, y_test, embeddings_index),
+                twitter_user_mention_count_feature]:
+            x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train, None, y_test)
+            print('x_train.shape', x_train.shape)
 
-    #### feature engineering
-    for new_feature_f in [twitter_favorite_count_feature, twitter_retweet_count_feature, twitter_punctuation_count_feature('?'), 
-            twitter_word_counter_feature, twitter_url_counter_feature, 
-            twitter_previous_tweet_similarity_feature(x_train, x_test, y_train, y_test, embeddings_index),
-            twitter_user_mention_count_feature]:
-        x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train, None, y_test)
-        print('x_train.shape', x_train.shape)
-
-    #x_train = np.concatenate((x_train, np.ones((x_train.shape[0], x_train.shape[1], 1))), axis=2)  #add is_twitter feature
-    #x_test = np.concatenate((x_test, np.ones((x_test.shape[0], x_test.shape[1], 1))), axis=2)  #add is_twitter feature
+        #x_train = np.concatenate((x_train, np.ones((x_train.shape[0], x_train.shape[1], 1))), axis=2)  #add is_twitter feature
+        #x_test = np.concatenate((x_test, np.ones((x_test.shape[0], x_test.shape[1], 1))), axis=2)  #add is_twitter feature
 
     return x_train, x_test, y_train, y_test, len(y_test)
 
-def load_and_preprocces_reddit(MAX_BRANCH_LENGTH):
+def load_and_preprocces_reddit(MAX_BRANCH_LENGTH, add_features):
     d_tw = load_reddit_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_extraction_loop)
 
@@ -78,22 +78,23 @@ def load_and_preprocces_reddit(MAX_BRANCH_LENGTH):
 
     #twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
 
-    #### feature engineering
-    for new_feature_f in [reddit_score_feature, reddit_likes_feature, reddit_punctuation_count_feature('?'), 
-        reddit_word_counter_feature, reddit_url_counter_feature, 
-        reddit_previous_post_similarity_feature(x_train, x_test, y_train, y_test, embeddings_index)]:
-        x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train, None, y_test)
-        print('x_train.shape', x_train.shape)
+    if add_features:
+        #### feature engineering
+        for new_feature_f in [reddit_score_feature, reddit_likes_feature, reddit_punctuation_count_feature('?'), 
+            reddit_word_counter_feature, reddit_url_counter_feature, 
+            reddit_previous_post_similarity_feature(x_train, x_test, y_train, y_test, embeddings_index)]:
+            x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train, None, y_test)
+            print('x_train.shape', x_train.shape)
 
-    x_train = np.concatenate((x_train, np.zeros((x_train.shape[0], x_train.shape[1], 1))), axis=2) #instead of twitter_user_mention_count_feature
-    x_test = np.concatenate((x_test, np.zeros((x_test.shape[0], x_test.shape[1], 1))), axis=2) #instead of twitter_user_mention_count_feature
+        x_train = np.concatenate((x_train, np.zeros((x_train.shape[0], x_train.shape[1], 1))), axis=2) #instead of twitter_user_mention_count_feature
+        x_test = np.concatenate((x_test, np.zeros((x_test.shape[0], x_test.shape[1], 1))), axis=2) #instead of twitter_user_mention_count_feature
 
     return x_train, x_test, y_train, y_test
 
-def combine_data(MAX_BRANCH_LENGTH):
+def combine_data(MAX_BRANCH_LENGTH, add_features=True):
 
-    x_train, x_test, y_train, y_test, len_twitter_test = load_and_preprocces_twitter(MAX_BRANCH_LENGTH)
-    x_train_reddit, x_test_reddit, y_train_reddit, y_test_reddit = load_and_preprocces_reddit(MAX_BRANCH_LENGTH)
+    x_train, x_test, y_train, y_test, len_twitter_test = load_and_preprocces_twitter(MAX_BRANCH_LENGTH, add_features)
+    x_train_reddit, x_test_reddit, y_train_reddit, y_test_reddit = load_and_preprocces_reddit(MAX_BRANCH_LENGTH, add_features)
 
     x_train = np.concatenate((x_train, x_train_reddit), axis=0)
     x_test = np.concatenate((x_test, x_test_reddit), axis=0)
@@ -121,9 +122,9 @@ def calculate_max_length():
 
 def lstm_hyperparameters():
     MAX_BRANCH_LENGTH = calculate_max_length()
-    x_train, x_test, y_train, y_test, len_twitter_test = combine_data(MAX_BRANCH_LENGTH)
+    x_train, x_test, y_train, y_test, len_twitter_test = combine_data(MAX_BRANCH_LENGTH, add_features=False)
 
-    best_acc = 0
+    best_f1 = 0
     best_params = [0, 0, 0, 0, 0]
     for units in [32, 64, 100, 128, 256]:
         for dropout in [0.01, 0.05, 0.1, 0.2, 0.4]:
@@ -156,14 +157,14 @@ def lstm_hyperparameters():
 
                         preds_test_twitter, y_test_twitter = remove_duplicated_data(preds_test_twitter, y_test_twitter, d_tw, dv_x)
 
-                        acc_score = accuracy_score(preds_test_twitter, y_test_twitter)
+                        f1_score = f1_score(preds_test_twitter, y_test_twitter)
                         print('accuracy_score(preds_test_twitter, y_test_twitter) after removing padded/duplicated', acc_score)
                                     
-                        if acc_score > best_acc:
-                            best_acc = acc_score
+                        if f1_score > best_f1:
+                            best_f1 = f1_score
                             best_params = [units, dropout, recurrent_dropout, lr, nb_epoch]
-    print('FINAL ACC')
-    print(best_acc)
+    print('FINAL F1')
+    print(best_f1)
     print('units, dropout, recurrent_dropout, lr, nb_epoch')
     print(best_params)
 
@@ -233,19 +234,37 @@ def get_predictions_combined():
 
 
 def submit_json_dev():
-    preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined()
+    #preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined()
 
     data = pd.read_pickle('twitter_new2.pkl')
 
     x_id_tw = []
-
+    counter = dict()
+    br = 0
     for base_text in data['dev']:
         x_id_tw.append(base_text['source']['id'])
+        label = base_text['source']['label']
+        if label in counter:
+            counter[label] += 1
+        else:
+            counter[label] = 1
+        br += 1
 
         for reply in base_text['replies']:
             if pd.notnull(reply['text']) and reply['text'] != '[deleted]' and reply['text'] != '[removed]':
                 x_id_tw.append(reply['id'])
-
+                label = reply['label']
+                if label in counter:
+                    counter[label] += 1
+                else:
+                    counter[label] = 1
+                br += 1
+    print(counter)
+    print(br)
+    for key in counter:
+        counter[key] /= br
+    print(counter)
+        
     data = pd.read_pickle('reddit_new2.pkl')
 
     x_id_rd = []
@@ -285,4 +304,4 @@ def submit_json_dev():
 
 
 if __name__ == "__main__":
-    submit_json_dev()
+    lstm_hyperparameters()

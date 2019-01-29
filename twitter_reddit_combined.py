@@ -13,6 +13,8 @@ from keras.preprocessing.sequence import pad_sequences
 import os
 from keras.layers import Bidirectional
 
+import keras
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -169,19 +171,23 @@ def lstm_hyperparameters():
     print(best_params)
 
 
-def get_predictions_combined():
+def get_predictions_combined_task_a():
     MAX_BRANCH_LENGTH = calculate_max_length()
     x_train, x_test, y_train, y_test, len_twitter_test = combine_data(MAX_BRANCH_LENGTH)
 
+    sample_weights = calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH)
+
     model = Sequential()
-    model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True,
+                   input_shape=(x_train.shape[1], x_train.shape[2])))
     model.add(Activation('sigmoid'))
     model.add(TimeDistributed(Dense(NUMBER_OF_CLASSES)))
     model.add(Activation('softmax'))
 
     adam = Adam(lr=0.001)
-    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
+    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'], sample_weight_mode='temporal',
+                  )
+    model.fit(x_train, y_train, nb_epoch=8, batch_size=64, sample_weight=sample_weights)  # nb_epoch=50
 
     #preds_train = model.predict(x_train, 100)
     #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
@@ -233,8 +239,8 @@ def get_predictions_combined():
     return preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit
 
 
-def submit_json_dev():
-    #preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined()
+def submit_task_a():
+    preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined_task_a()
 
     data = pd.read_pickle('twitter_new2.pkl')
 
@@ -295,12 +301,30 @@ def submit_json_dev():
     assert len(x_id_tw) == len(preds_test_twitter)
     assert len(x_id_rd) == len(preds_test_reddit)
 
-    submit_dict_taskaenglish = json.dumps(submit_dict_taskaenglish)
-    f = open('answer', 'w')
-    f.write('blin')
-    f.write(submit_dict_taskaenglish)
+    # submit_dict_taskaenglish = json.dumps(submit_dict_taskaenglish)
+    # f = open('answer', 'w')
+    # f.write('blin')
+    # f.write(submit_dict_taskaenglish)
+    #
+    # print('submit_dict_taskaenglish', submit_dict_taskaenglish)
 
-    print(submit_dict_taskaenglish)
+    return submit_dict_taskaenglish
+
+
+def submit_task_a_json():
+    submit_dict_taskaenglish = submit_task_a()
+
+    final_json = dict()
+    final_json['subtaskaenglish'] = submit_dict_taskaenglish
+    final_json['subtaskbenglish'] = None
+    final_json['subtaskadanish'] = None
+    final_json['subtaskbdanish'] = None
+    final_json['subtaskarussian'] = None
+    final_json['subtaskbrussian'] = None
+
+    f = open('answer3.json', 'w')
+    final_json = json.dumps(final_json)
+    f.write(final_json)
 
 
 if __name__ == "__main__":

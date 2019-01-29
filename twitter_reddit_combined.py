@@ -59,7 +59,7 @@ def calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH):
     sorted_keys = sorted(classes_count.keys())
     for key in sorted_keys:
         # class_weights[key] = (1 - (classes_count[key] / counter_all)) # * 10
-        class_weights[key] = (counter_all / (5 * classes_count[key]))
+        class_weights[key] = min([9.0, (counter_all / (5 * classes_count[key]))])
 
     ##### label DENY to high weight
     # class_weights['[0. 0. 0. 1.]'] = 5

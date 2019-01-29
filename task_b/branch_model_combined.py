@@ -15,7 +15,7 @@ import os
 from keras.layers import Bidirectional
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.feature_extraction.text import TfidfVectorizer
 from itertools import combinations
 
@@ -38,6 +38,7 @@ MAX_BRANCH_LENGTH_task_b = -1
 NUMBER_OF_CLASSES_task_b = 3
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
+
 
 def load_and_preprocces_twitter_task_b(MAX_BRANCH_LENGTH_task_b):
 
@@ -142,6 +143,49 @@ def combine_data():
 
     return x_train, x_test, y_train, y_test, len_twitter_test
 
+def our_rmse_score(pred, y, pred_max_proba):
+    output = []
+    label = []
+    print(pred_max_proba)
+    for i in range(len(pred)):
+        if pred[i] == y[i] and pred[i] != 'unverified':
+            output.append(pred_max_proba[i])
+            label.append(1)
+            print('1')
+        elif pred[i] == y[i] and pred[i] == 'unverified':
+            output.append(0.5)
+            label.append(0)
+            print('2')
+        elif pred[i] != y[i] and pred[i] == 'unverified':
+            output.append(0.5)
+            label.append(1)
+            print('3')
+        elif pred[i] != 'unverified' and y[i] == 'unverified':
+            output.append(pred_max_proba[i])
+            label.append(0)
+            print('4')
+        elif pred[i] != 'unverified' and y[i] != 'unverified' and pred[i] != y[i]:
+            output.append(1 - pred_max_proba[i])
+            label.append(1)
+            print('5')
+        else:
+            print('BUGGGGGG')
+
+    return mean_squared_error(output, label)**0.5
+
+
+def transform_predictions(preds_test2, preds_test2_max_proba):
+    final = []
+    for i in range(len(preds_test2)):
+        if preds_test2[i] == 'unverified':
+            final.append(('false', 0))
+        else:
+            final.append((preds_test2[i], preds_test2_max_proba[i]))
+
+    return final
+
+
+
 def main():
     x_train, x_test, y_train, y_test, len_twitter_test = combine_data()
 
@@ -154,35 +198,66 @@ def main():
     adam = Adam(lr=0.001)
     model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
 
-    y_train, y_test = transform_labels_source(y_train, y_test, number_of_classes=NUMBER_OF_CLASSES_task_b)
+    y_train, y_test, le = transform_labels_source(y_train, y_test, number_of_classes=NUMBER_OF_CLASSES_task_b, return_encoder=True)
 
     model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
 
     preds_test = model.predict(x_test, 100)
 
     x_test_twitter = x_test[:len_twitter_test]
-    preds_test_twitter = preds_test[:len_twitter_test]
-    y_test_twitter = y_test[:len_twitter_test]
+    preds_test_twitter_proba = preds_test[:len_twitter_test]
+    y_test_twitter_one_hot = y_test[:len_twitter_test]
 
-    preds_test_twitter = [np.argmax(xx) for xx in preds_test_twitter]   #includes predictions for padded data
-    y_test_twitter = [np.argmax(yy) for yy in y_test_twitter]
+    preds_test_twitter = [np.argmax(xx) for xx in preds_test_twitter_proba]   #includes predictions for padded data
+    y_test_twitter = [np.argmax(yy) for yy in y_test_twitter_one_hot]
+    preds_test_max_proba = [np.max(xx) for xx in preds_test_twitter_proba]
+
+    f = open('1.txt', 'w')
+    for redak in preds_test_twitter:
+        f.write(str(redak))
+        f.write('\n')
+
+    f = open('2.txt', 'w')
+    for redak in y_test_twitter:
+        f.write(str(redak))
+        f.write('\n')
+
+    f = open('3.txt', 'w')
+    for redak in preds_test_max_proba:
+        f.write(str(redak))
+        f.write('\n')
+
+    #preds_test_twitter = np.reshape(preds_test_twitter, (-1, NUMBER_OF_CLASSES_task_b))
+    #y_test_twitter = np.reshape(y_test_twitter, (-1, NUMBER_OF_CLASSES_task_b))
+
+    preds_test_twitter = le.inverse_transform(preds_test_twitter)
+    y_test_twitter = le.inverse_transform(y_test_twitter)
 
     xx_prev0 = None
     br = 0
     preds_test2 = []
     y_test2 = []
+    preds_test2_max_proba = []
     #  predictions for the same source will be printed and separated by newline
     for i, xx in enumerate(x_test_twitter):
         if (xx[0][:200] != xx_prev0).any():
             br += 1
             preds_test2.append(preds_test_twitter[i])
             y_test2.append(y_test_twitter[i])
+            preds_test2_max_proba.append(preds_test_max_proba[i])
         
         xx_prev0 = xx[0][:200]
 
+    print(y_test2)
+    print()
+    print(preds_test2)
+
     print('br: ', br)
     print('len: ', len(preds_test2))
-    print('real accuracy_score(preds_test, y_test)', accuracy_score(preds_test2, y_test2))
+    print('rmse(preds_test, y_test)', our_rmse_score(preds_test2, y_test2, preds_test2_max_proba))
+
+    predictions_final_format = transform_predictions(preds_test2, preds_test2_max_proba)
+    print(predictions_final_format)
 
 
 main()

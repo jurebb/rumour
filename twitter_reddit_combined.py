@@ -38,6 +38,45 @@ NUMBER_OF_CLASSES = 4
 GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
+
+def calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH):
+    """for sample_weights in keras, because metric now is f1 and dataset is highly unbalanced"""
+
+    classes_count = dict()
+
+    counter_all = 0
+
+    for branch in y_train:
+        for timestep in branch:
+            if str(timestep) not in classes_count.keys():
+                classes_count[str(timestep)] = 0
+            else:
+                classes_count[str(timestep)] += 1
+
+            counter_all += 1
+
+    class_weights = dict()
+    sorted_keys = sorted(classes_count.keys())
+    for key in sorted_keys:
+        # class_weights[key] = (1 - (classes_count[key] / counter_all)) # * 10
+        class_weights[key] = (counter_all / (5 * classes_count[key]))
+
+    ##### label DENY to high weight
+    # class_weights['[0. 0. 0. 1.]'] = 5
+    print('class_weights', class_weights)
+    #####
+
+    y_weights = []
+    for branch in y_train:
+        branch_weigths = []
+        for timestep in branch:
+            branch_weigths.append(class_weights[str(timestep)])
+
+        y_weights.append(np.asarray(branch_weigths))
+
+    return np.asarray(y_weights)
+
+
 def load_and_preprocces_twitter(MAX_BRANCH_LENGTH, add_features):
 
     d_tw = load_twitter_data()
@@ -134,17 +173,18 @@ def lstm_hyperparameters():
                 for lr in [0.0001, 0.001, 0.01]:
                     for nb_epoch in [4, 8, 16, 32]:
 
+                        sample_weights = calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH)
+
                         model = Sequential()
-                        model.add(LSTM(units=units, dropout=dropout, recurrent_dropout=recurrent_dropout, 
-                            return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+                        model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True,
+                                        input_shape=(x_train.shape[1], x_train.shape[2])))
                         model.add(Activation('sigmoid'))
                         model.add(TimeDistributed(Dense(NUMBER_OF_CLASSES)))
                         model.add(Activation('softmax'))
 
-                        adam = Adam(lr=lr)
-                        model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-                        model.fit(x_train, y_train, nb_epoch=nb_epoch, batch_size=64, verbose=0)  # nb_epoch=50
-
+                        adam = Adam(lr=0.001)
+                        model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'], sample_weight_mode='temporal')
+                        model.fit(x_train, y_train, nb_epoch=8, batch_size=64, sample_weight=sample_weights, verbose=0) 
                         preds_test = model.predict(x_test, 100)
                         preds_test_twitter = preds_test[:len_twitter_test]
                         y_test_twitter = y_test[:len_twitter_test]
@@ -161,6 +201,8 @@ def lstm_hyperparameters():
 
                         curr_score = f1_score(preds_test_twitter, y_test_twitter, average='macro')
                         print('f1_score(preds_test_twitter, y_test_twitter) after removing padded/duplicated', curr_score)
+
+                        keras.backend.clear_session()
                                     
                         if curr_score > best_f1:
                             best_f1 = curr_score

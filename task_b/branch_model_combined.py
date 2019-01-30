@@ -153,11 +153,11 @@ def our_rmse_score(pred, y, pred_max_proba):
             label.append(1)
             print('1')
         elif pred[i] == y[i] and pred[i] == 'unverified':
-            output.append(0.5)
+            output.append(1 - pred_max_proba[i])
             label.append(0)
             print('2')
         elif pred[i] != y[i] and pred[i] == 'unverified':
-            output.append(0.5)
+            output.append(1 - pred_max_proba[i])
             label.append(1)
             print('3')
         elif pred[i] != 'unverified' and y[i] == 'unverified':
@@ -178,7 +178,7 @@ def transform_predictions(preds_test2, preds_test2_max_proba):
     final = []
     for i in range(len(preds_test2)):
         if preds_test2[i] == 'unverified':
-            final.append(('false', 0))
+            final.append(('false', 1 - preds_test2_max_proba[i]))
         else:
             final.append((preds_test2[i], preds_test2_max_proba[i]))
 
@@ -201,6 +201,8 @@ def submit_task_b(tw_pkl, rd_pkl):
     y_train, y_test, le = transform_labels_source(y_train, y_test, number_of_classes=NUMBER_OF_CLASSES_task_b,
                                                   return_encoder=True)
 
+    joblib.dump(le, 'le_be.pkl')
+
     model.fit(x_train, y_train, nb_epoch=32, batch_size=64)  # nb_epoch=50
 
     preds_test = model.predict(x_test, 100)
@@ -213,7 +215,7 @@ def submit_task_b(tw_pkl, rd_pkl):
     preds_test_twitter = [np.argmax(xx) for xx in preds_test_twitter_proba]  # includes predictions for padded data
     y_test_twitter = [np.argmax(yy) for yy in y_test_twitter_one_hot]
     preds_test_max_proba = [np.max(xx) for xx in preds_test_twitter_proba]
-
+        
     preds_test_twitter = le.inverse_transform(preds_test_twitter)
     y_test_twitter = le.inverse_transform(y_test_twitter)
 
@@ -231,6 +233,21 @@ def submit_task_b(tw_pkl, rd_pkl):
             preds_test2_max_proba.append(preds_test_max_proba[i])
 
         xx_prev0 = xx[0][:200]
+
+    f = open('tw1.txt', 'w')
+    for redak in preds_test2:
+        f.write(str(redak))
+        f.write('\n')
+
+    f = open('tw2.txt', 'w')
+    for redak in y_test2:
+        f.write(str(redak))
+        f.write('\n')
+
+    f = open('tw3.txt', 'w')
+    for redak in preds_test2_max_proba:
+        f.write(str(redak))
+        f.write('\n')
 
     print('twitter br: ', br)
     print('twitter len: ', len(preds_test2))
@@ -265,6 +282,21 @@ def submit_task_b(tw_pkl, rd_pkl):
             preds_test2_max_proba.append(preds_test_max_proba[i])
 
         xx_prev0 = xx[0][:200]
+
+    f = open('rd1.txt', 'w')
+    for redak in preds_test_twitter:
+        f.write(str(redak))
+        f.write('\n')
+
+    f = open('rd2.txt', 'w')
+    for redak in y_test_twitter:
+        f.write(str(redak))
+        f.write('\n')
+
+    f = open('rd3.txt', 'w')
+    for redak in preds_test_max_proba:
+        f.write(str(redak))
+        f.write('\n')
 
     print('reddit br: ', br)
     print('reddit len: ', len(preds_test2))
@@ -394,4 +426,4 @@ def main():
     print(predictions_final_format)
 
 
-main()
+submit_task_b('twitter_new2.pkl', 'reddit_new2.pkl')

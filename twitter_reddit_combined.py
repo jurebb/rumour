@@ -26,6 +26,8 @@ from sequential.additional_computed_features import *
 from sequential.additional_computed_features_reddit import *
 from sequential.feature_utils import *
 
+import task_b.branch_model_combined as task_b
+
 from numpy.random import seed
 from tensorflow import set_random_seed
 seed(12)
@@ -353,21 +355,27 @@ def submit_task_a():
     return submit_dict_taskaenglish
 
 
-def submit_task_a_json():
+def myconverter(o):
+    if isinstance(o, np.float32):
+        return float(o)
+
+
+def submit_json():
     submit_dict_taskaenglish = submit_task_a()
+    submit_dict_taskbenglish = task_b.submit_task_b()
 
     final_json = dict()
     final_json['subtaskaenglish'] = submit_dict_taskaenglish
-    final_json['subtaskbenglish'] = None
+    final_json['subtaskbenglish'] = submit_dict_taskbenglish
     final_json['subtaskadanish'] = None
     final_json['subtaskbdanish'] = None
     final_json['subtaskarussian'] = None
     final_json['subtaskbrussian'] = None
 
-    f = open('answer3.json', 'w')
-    final_json = json.dumps(final_json)
+    f = open('answer_full1.json', 'w')
+    final_json = json.dumps(final_json, default=myconverter)
     f.write(final_json)
 
 
 if __name__ == "__main__":
-    lstm_hyperparameters()
+    submit_json()

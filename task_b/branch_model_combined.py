@@ -185,6 +185,140 @@ def transform_predictions(preds_test2, preds_test2_max_proba):
     return final
 
 
+def submit_task_b():
+    x_train, x_test, y_train, y_test, len_twitter_test = combine_data()
+
+    model = Sequential()
+    model.add(Bidirectional(LSTM(units=32, dropout=0.1, recurrent_dropout=0.1, return_sequences=False),
+                            input_shape=(x_train.shape[1], x_train.shape[2])))
+    model.add(Activation('sigmoid'))
+    model.add(Dense(NUMBER_OF_CLASSES_task_b))
+    model.add(Activation('softmax'))
+
+    adam = Adam(lr=0.0001)
+    model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
+
+    y_train, y_test, le = transform_labels_source(y_train, y_test, number_of_classes=NUMBER_OF_CLASSES_task_b,
+                                                  return_encoder=True)
+
+    model.fit(x_train, y_train, nb_epoch=32, batch_size=64)  # nb_epoch=50
+
+    preds_test = model.predict(x_test, 100)
+
+    ######################################################################################################## twitter
+    x_test_twitter = x_test[:len_twitter_test]
+    preds_test_twitter_proba = preds_test[:len_twitter_test]
+    y_test_twitter_one_hot = y_test[:len_twitter_test]
+
+    preds_test_twitter = [np.argmax(xx) for xx in preds_test_twitter_proba]  # includes predictions for padded data
+    y_test_twitter = [np.argmax(yy) for yy in y_test_twitter_one_hot]
+    preds_test_max_proba = [np.max(xx) for xx in preds_test_twitter_proba]
+
+    preds_test_twitter = le.inverse_transform(preds_test_twitter)
+    y_test_twitter = le.inverse_transform(y_test_twitter)
+
+    xx_prev0 = None
+    br = 0
+    preds_test2 = []
+    y_test2 = []
+    preds_test2_max_proba = []
+    #  predictions for the same source will be printed and separated by newline
+    for i, xx in enumerate(x_test_twitter):
+        if (xx[0][:200] != xx_prev0).any():
+            br += 1
+            preds_test2.append(preds_test_twitter[i])
+            y_test2.append(y_test_twitter[i])
+            preds_test2_max_proba.append(preds_test_max_proba[i])
+
+        xx_prev0 = xx[0][:200]
+
+    print('twitter br: ', br)
+    print('twitter len: ', len(preds_test2))
+    print('twitter rmse(preds_test, y_test)', our_rmse_score(preds_test2, y_test2, preds_test2_max_proba))
+
+    predictions_final_format_twitter = transform_predictions(preds_test2, preds_test2_max_proba)
+    ##################################################################################################################
+
+    ######################################################################################################## reddit
+    x_test_twitter = x_test[len_twitter_test:]
+    preds_test_twitter_proba = preds_test[len_twitter_test:]
+    y_test_twitter_one_hot = y_test[len_twitter_test:]
+
+    preds_test_twitter = [np.argmax(xx) for xx in preds_test_twitter_proba]  # includes predictions for padded data
+    y_test_twitter = [np.argmax(yy) for yy in y_test_twitter_one_hot]
+    preds_test_max_proba = [np.max(xx) for xx in preds_test_twitter_proba]
+
+    preds_test_twitter = le.inverse_transform(preds_test_twitter)
+    y_test_twitter = le.inverse_transform(y_test_twitter)
+
+    xx_prev0 = None
+    br = 0
+    preds_test2 = []
+    y_test2 = []
+    preds_test2_max_proba = []
+    #  predictions for the same source will be printed and separated by newline
+    for i, xx in enumerate(x_test_twitter):
+        if (xx[0][:200] != xx_prev0).any():
+            br += 1
+            preds_test2.append(preds_test_twitter[i])
+            y_test2.append(y_test_twitter[i])
+            preds_test2_max_proba.append(preds_test_max_proba[i])
+
+        xx_prev0 = xx[0][:200]
+
+    print('reddit br: ', br)
+    print('reddit len: ', len(preds_test2))
+    print('reddit rmse(preds_test, y_test)', our_rmse_score(preds_test2, y_test2, preds_test2_max_proba))
+
+    predictions_final_format_reddit = transform_predictions(preds_test2, preds_test2_max_proba)
+    ##################################################################################################################
+
+    ###################################################################### packaging it into a JSON format
+    data = pd.read_pickle('twitter_new2.pkl')
+
+    x_id_tw = []
+    counter = dict()
+    br = 0
+    for base_text in data['dev']:
+        x_id_tw.append(base_text['source']['id'])
+        label = base_text['source']['label']
+        if label in counter:
+            counter[label] += 1
+        else:
+            counter[label] = 1
+        br += 1
+
+    print(counter)
+    print(br)
+    for key in counter:
+        counter[key] /= br
+    print(counter)
+
+    data = pd.read_pickle('reddit_new2.pkl')
+
+    x_id_rd = []
+
+    print('data.keys()', data.keys())
+    print('data[test][0].keys()', data['dev'][0].keys())
+    for base_text in data['dev']:
+        x_id_rd.append(base_text['source']['id_str'])
+
+    submit_dict_taskbenglish = dict()
+
+    for i in range(len(x_id_tw)):
+        submit_dict_taskbenglish[x_id_tw[i]] = predictions_final_format_twitter[i]
+    for i in range(len(x_id_rd)):
+        submit_dict_taskbenglish[x_id_rd[i]] = predictions_final_format_reddit[i]
+
+    print('len(x_id_rd)', len(x_id_rd))
+    print('len(preds_test_reddit)', len(predictions_final_format_reddit))
+
+    assert len(x_id_tw) == len(predictions_final_format_twitter)
+    assert len(x_id_rd) == len(predictions_final_format_reddit)
+
+    return submit_dict_taskbenglish
+    ##################################################################################################################
+
 
 def main():
     x_train, x_test, y_train, y_test, len_twitter_test = combine_data()

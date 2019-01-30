@@ -15,7 +15,7 @@ import os
 from keras.layers import Bidirectional
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from itertools import combinations
 
@@ -27,13 +27,16 @@ from sequential.feature_utils import *
 
 from numpy.random import seed
 from tensorflow import set_random_seed
+
+import twitter_reddit_combined as TRC
+
 seed(12)
 set_random_seed(22)
 
 MAX_BRANCH_LENGTH = -1
 NUMBER_OF_CLASSES = 4
 #GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.840B.300d\\glove.840B.300d.txt'
-GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\glove.twitter.27B.200d.txt'
+GLOVE_DIR = 'C:\\Users\\viktor\\Projects\\Python\\projektHSP\\glove.twitter.27B\\g'
 #  GLOVE_DIR = '/home/interferon/Documents/dipl_projekt/glove/glove.twitter.27B.200d.txt'
 
 
@@ -195,16 +198,18 @@ def all_subsets_feature_selection_twitter():
 
         print('>>>> in loop x_train_temp.shape', x_train_current.shape)
 
+        sample_weights = TRC.calculate_sample_weights_task_a(y_train, MAX_BRANCH_LENGTH)
+
         model = Sequential()
-        model.add(LSTM(units=100, dropout=0.1, recurrent_dropout=0.1, return_sequences=True,
+        model.add(LSTM(units=32, dropout=0.1, recurrent_dropout=0.1, return_sequences=True,
                        input_shape=(x_train_current.shape[1], x_train_current.shape[2])))
         model.add(Activation('sigmoid'))
         model.add(TimeDistributed(Dense(NUMBER_OF_CLASSES)))
         model.add(Activation('softmax'))
 
-        adam = Adam(lr=0.001)
-        model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-        model.fit(x_train_current, y_train, nb_epoch=8, batch_size=64, verbose=0)  # nb_epoch=50
+        adam = Adam(lr=0.0001)
+        model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'], sample_weight_mode='temporal')
+        model.fit(x_train_current, y_train, nb_epoch=32, batch_size=64, sample_weight=sample_weights, verbose=0)  # nb_epoch=50
 
         preds_test = model.predict(x_test_current, 100)
         preds_test = [np.argmax(xx) for x in preds_test for xx in x]  # includes predictions for padded data
@@ -216,16 +221,16 @@ def all_subsets_feature_selection_twitter():
         preds_test, y_test = remove_padded_data(preds_test, y_test)
         preds_test, y_test = remove_duplicated_data(preds_test, y_test, d_tw, dv_x)
 
-        acc_score = accuracy_score(preds_test, y_test)
-        print('accuracy_score(preds_test, y_test) after removing padded/duplicated', acc_score)
+        f1_score_ = f1_score(preds_test, y_test, average='macro')
+        print('f1_score(preds_test, y_test) after removing padded/duplicated', f1_score_)
         # print('preds_test', preds_test)
 
-        if acc_score >= current_max_score:
+        if f1_score_ >= current_max_score:
             del selected_features
             selected_features = []
-            print('>>> new current_max_score:', acc_score)
+            print('>>> new current_max_score:', f1_score_)
             print('>>> new current_max_feature_subset:', features_list)
-            current_max_score = acc_score
+            current_max_score = f1_score_
             selected_features = features_list
         else:
             del features_list
@@ -285,10 +290,6 @@ def main():
         model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
         model.fit(x_train, y_train, nb_epoch=8, batch_size=64)  # nb_epoch=50
 
-        #preds_train = model.predict(x_train, 100)
-        #preds_train = [np.argmax(xx) for x in preds_train for xx in x]
-        #y_train = [np.argmax(xx) for x in y_train for xx in x]
-
         preds_test = model.predict(x_test, 100) 
         preds_test = [np.argmax(xx) for x in preds_test for xx in x] #includes predictions for padded data
         y_test = [np.argmax(xx) if np.max(xx) != 0 else 'None' for x in y_test for xx in x] #predictions for padded data added as str None
@@ -301,4 +302,6 @@ def main():
         print('accuracy_score(preds_test, y_test) after removing padded/duplicated', accuracy_score(preds_test, y_test))
         print('preds_test', preds_test)
 
-main()
+
+if __name__ == "__main__":
+    all_subsets_feature_selection_twitter()

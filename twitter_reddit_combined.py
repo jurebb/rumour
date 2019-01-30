@@ -283,10 +283,10 @@ def get_predictions_combined_task_a():
     return preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit
 
 
-def submit_task_a():
+def submit_task_a(tw_pkl, rd_pkl):
     preds_test_twitter, preds_test_reddit, y_test_twitter, y_test_reddit = get_predictions_combined_task_a()
 
-    data = pd.read_pickle('twitter_new2.pkl')
+    data = pd.read_pickle(tw_pkl)
 
     x_id_tw = []
     counter = dict()
@@ -315,7 +315,7 @@ def submit_task_a():
         counter[key] /= br
     print(counter)
         
-    data = pd.read_pickle('reddit_new2.pkl')
+    data = pd.read_pickle(rd_pkl)
 
     x_id_rd = []
 
@@ -361,8 +361,8 @@ def myconverter(o):
 
 
 def submit_json():
-    submit_dict_taskaenglish = submit_task_a()
-    submit_dict_taskbenglish = task_b.submit_task_b()
+    submit_dict_taskaenglish = submit_task_a(tw_pkl='twitter_new2.pkl', rd_pkl='reddit_new2.pkl')
+    submit_dict_taskbenglish = task_b.submit_task_b(tw_pkl='twitter_new2.pkl', rd_pkl='reddit_new2.pkl')
 
     final_json = dict()
     final_json['subtaskaenglish'] = submit_dict_taskaenglish
@@ -372,7 +372,7 @@ def submit_json():
     final_json['subtaskarussian'] = None
     final_json['subtaskbrussian'] = None
 
-    f = open('answer_full1.json', 'w')
+    f = open('answer_full2.json', 'w')
     final_json = json.dumps(final_json, default=myconverter)
     f.write(final_json)
 

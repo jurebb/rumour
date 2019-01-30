@@ -185,7 +185,7 @@ def transform_predictions(preds_test2, preds_test2_max_proba):
     return final
 
 
-def submit_task_b():
+def submit_task_b(tw_pkl, rd_pkl):
     x_train, x_test, y_train, y_test, len_twitter_test = combine_data()
 
     model = Sequential()
@@ -274,7 +274,7 @@ def submit_task_b():
     ##################################################################################################################
 
     ###################################################################### packaging it into a JSON format
-    data = pd.read_pickle('twitter_new2.pkl')
+    data = pd.read_pickle(tw_pkl)
 
     x_id_tw = []
     counter = dict()
@@ -294,7 +294,7 @@ def submit_task_b():
         counter[key] /= br
     print(counter)
 
-    data = pd.read_pickle('reddit_new2.pkl')
+    data = pd.read_pickle(rd_pkl)
 
     x_id_rd = []
 

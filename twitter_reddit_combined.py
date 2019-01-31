@@ -107,6 +107,36 @@ def load_and_preprocces_twitter(MAX_BRANCH_LENGTH, add_features):
 
     return x_train, x_test, y_train, y_test, len(y_test)
 
+def load_and_preprocces_twitter2(MAX_BRANCH_LENGTH, add_features):
+
+    d_tw = load_twitter_data()
+    tr_x, tr_y, test_x, _, dv_x, dv_y = branchify_data(d_tw, branchify_twitter_extraction_loop)
+
+    print('GLAVNOOOOOOOOOOOO: ', len(test_x))
+
+    embeddings_index = make_embeddings_index()
+
+    x_train = transform_data(tr_x, embeddings_index, MAX_BRANCH_LENGTH) 
+    y_train = transform_labels(tr_y, MAX_BRANCH_LENGTH) 
+
+    x_test = transform_data(dv_x, embeddings_index, MAX_BRANCH_LENGTH) 
+    y_test = transform_labels(dv_y, MAX_BRANCH_LENGTH)
+
+    #twitter_user_description_feature = twitter_user_description_feature_(embeddings_index)
+    if add_features:
+        #### feature engineering
+        for new_feature_f in [twitter_favorite_count_feature, twitter_retweet_count_feature, twitter_punctuation_count_feature('?'), 
+                twitter_word_counter_feature, twitter_url_counter_feature, 
+                twitter_previous_tweet_similarity_feature(x_train, x_test, y_train, y_test, embeddings_index),
+                twitter_user_mention_count_feature]:
+            x_train, _, x_test = concat_features([new_feature_f], x_train, None, x_test, y_train, None, y_test)
+            print('x_train.shape', x_train.shape)
+
+        #x_train = np.concatenate((x_train, np.ones((x_train.shape[0], x_train.shape[1], 1))), axis=2)  #add is_twitter feature
+        #x_test = np.concatenate((x_test, np.ones((x_test.shape[0], x_test.shape[1], 1))), axis=2)  #add is_twitter feature
+
+    return x_train, x_test, y_train, y_test, len(y_test)
+
 def load_and_preprocces_reddit(MAX_BRANCH_LENGTH, add_features):
     d_tw = load_reddit_data()
     tr_x, tr_y, _, _, dv_x, dv_y = branchify_data(d_tw, branchify_reddit_extraction_loop)
@@ -136,7 +166,7 @@ def load_and_preprocces_reddit(MAX_BRANCH_LENGTH, add_features):
 
 def combine_data(MAX_BRANCH_LENGTH, add_features=True):
 
-    x_train, x_test, y_train, y_test, len_twitter_test = load_and_preprocces_twitter(MAX_BRANCH_LENGTH, add_features)
+    x_train, x_test, y_train, y_test, len_twitter_test = load_and_preprocces_twitter2(MAX_BRANCH_LENGTH, add_features)
     x_train_reddit, x_test_reddit, y_train_reddit, y_test_reddit = load_and_preprocces_reddit(MAX_BRANCH_LENGTH, add_features)
 
     x_train = np.concatenate((x_train, x_train_reddit), axis=0)

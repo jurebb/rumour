@@ -19,6 +19,12 @@ def load_twitter_data():
     os.chdir(_DATA_DIR)
     data = pd.read_pickle('twitter_new2.pkl')
 
+    print(data.keys())
+
+    test_data = pd.read_pickle('twitter_test.pkl')
+    print(test_data.keys())
+    data['test'] = test_data['test']
+
     return data
 
 
@@ -27,6 +33,9 @@ def load_reddit_data():
 
     os.chdir(_DATA_DIR)
     data = pd.read_pickle('reddit_new2.pkl')
+
+    test_data = pd.read_pickle('reddit_test.pkl')
+    data['test'] = test_data['test']
 
     return data
 
@@ -42,7 +51,7 @@ def branchify_data(data, branchify_function):
     # test
     test_branches_texts = []
     test_branches_labels = []
-    branchify_function(data['test'], test_branches_texts, test_branches_labels)
+    branchify_function(data['test'], test_branches_texts, test_branches_labels, has_labels=False)
 
     # dev
     dev_branches_texts = []
@@ -53,10 +62,11 @@ def branchify_data(data, branchify_function):
             dev_branches_texts, dev_branches_labels
 
 
-def branchify_twitter_extraction_loop(data, branches_texts, branches_labels):
+def branchify_twitter_extraction_loop(data, branches_texts, branches_labels, has_labels=True):
     """Extract tweets from ids of branches"""
 
     for source_text in data:
+        #print(source_text)
         ids_of_branches = source_text['branches']   # gives a list of branches ids from json structure
         for branch_ids in ids_of_branches:
             branch_texts = []
@@ -71,7 +81,8 @@ def branchify_twitter_extraction_loop(data, branches_texts, branches_labels):
                         raise AssertionError("twitter source id_str and id don't match for ", id)
 
                     branch_texts.append(source_text['source']['text'])
-                    branch_labels.append(source_text['source']['label'])
+                    if has_labels:
+                        branch_labels.append(source_text['source']['label'])
 
                 for reply in source_text['replies']:            # if the id in question is the reply of the source post
                     if reply['id_str'] == id:
@@ -79,13 +90,14 @@ def branchify_twitter_extraction_loop(data, branches_texts, branches_labels):
                             raise AssertionError("twitter reply id_str and id don't match for ", id)
 
                         branch_texts.append(reply['text'])
-                        branch_labels.append(reply['label'])
+                        if has_labels:
+                            branch_labels.append(reply['label'])
 
             branches_texts.append(branch_texts)
             branches_labels.append(branch_labels)
 
 
-def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
+def branchify_reddit_extraction_loop(data, branches_texts, branches_labels, has_labels=True):
     """Extract reddit posts from ids of branches"""
     za_ispisati = True
     for source_text in data:
@@ -100,7 +112,8 @@ def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
                         raise AssertionError("reddit source id_str and id don't match for ", id)
 
                     branch_texts.append(source_text['source']['text'])
-                    branch_labels.append(source_text['source']['label'])
+                    if has_labels:
+                        branch_labels.append(source_text['source']['label'])
 
                 for reply in source_text['replies']:            # if the id in question is the reply of the source post
                     if reply['id_str'] == id:
@@ -113,7 +126,8 @@ def branchify_reddit_extraction_loop(data, branches_texts, branches_labels):
                             print(reply['id_str'])
                             za_ispisati = False
                         branch_texts.append(reply['text'])
-                        branch_labels.append(reply['label'])
+                        if has_labels:
+                            branch_labels.append(reply['label'])
 
             branches_texts.append(branch_texts)
             branches_labels.append(branch_labels)

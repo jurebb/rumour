@@ -1,6 +1,7 @@
 from sequential.prepare_seq_data import *
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import numpy as np
+import copy
 
 
 def scale(x_train, x_test):
@@ -114,10 +115,14 @@ def twitter_retweet_count_feature():
     d_tw = load_twitter_data()
     tr_x_retweet_count = branchify_twitter_extract_feature_loop(d_tw['train'], 'retweet_count')
     dv_x_retweet_count = branchify_twitter_extract_feature_loop(d_tw['dev'], 'retweet_count')
+    ts_x_retweet_count = branchify_twitter_extract_feature_loop(d_tw['test'], 'retweet_count')
+
+    ts_x_retweet_count_org = copy.deepcopy(ts_x_retweet_count)
 
     tr_x_retweet_count, dv_x_retweet_count = scale(tr_x_retweet_count, dv_x_retweet_count)
+    _, ts_x_retweet_count = scale(ts_x_retweet_count_org, ts_x_retweet_count)
 
-    return tr_x_retweet_count, None, dv_x_retweet_count
+    return tr_x_retweet_count, ts_x_retweet_count_org, dv_x_retweet_count
 
 
 def twitter_favorite_count_feature():
@@ -128,13 +133,17 @@ def twitter_favorite_count_feature():
     d_tw = load_twitter_data()
     tr_x_favorite_count = branchify_twitter_extract_feature_loop(d_tw['train'], 'favorite_count')
     dv_x_favorite_count = branchify_twitter_extract_feature_loop(d_tw['dev'], 'favorite_count')
+    ts_x_favorite_count = branchify_twitter_extract_feature_loop(d_tw['test'], 'favorite_count')
+
+    tr_x_favorite_count_orig = copy.deepcopy(tr_x_favorite_count)
 
     tr_x_favorite_count, dv_x_favorite_count = scale2(tr_x_favorite_count, dv_x_favorite_count)
+    _, ts_x_favorite_count = scale2(tr_x_favorite_count_orig, ts_x_favorite_count)
 
     print(len(tr_x_favorite_count))
     print(tr_x_favorite_count[0])
 
-    return tr_x_favorite_count, None, dv_x_favorite_count
+    return tr_x_favorite_count, ts_x_favorite_count, dv_x_favorite_count
 
 
 def twitter_profile_use_background_image_feature():

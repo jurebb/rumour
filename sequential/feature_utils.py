@@ -148,6 +148,30 @@ def remove_duplicated_data(preds_test, y_test, d_tw, dv_x):
 
     return preds_test2, y_test2
 
+def remove_duplicated_data2(preds_test, d_tw, dv_x):
+    x_test_text_branchifyed = []
+    for podatak in dv_x:
+        for sentence in podatak:
+            x_test_text_branchifyed.append(sentence)
+
+    dev = d_tw['test']
+    
+    x_test_text_original = []
+    for nesto in dev:
+        for tekst in nesto['replies']:
+            x_test_text_original.append(tekst['text'])
+
+        x_test_text_original.append(nesto['source']['text'])
+
+    preds_test2 = []
+    for i in range(len(preds_test)):
+        if x_test_text_branchifyed[i] in x_test_text_original: 
+            preds_test2.append(preds_test[i])
+            x_test_text_original.remove(x_test_text_branchifyed[i])
+
+    return preds_test2
+
+
 
 def concat_features(feature_functions_list, train_set, test_set, dev_set, train_y, test_y, dev_y):
     new_train_set = []
@@ -191,7 +215,7 @@ def concat_features(feature_functions_list, train_set, test_set, dev_set, train_
             for i in range(len(test_set)):
                 new_branch = []
                 for j in range(len(test_set[i])):
-                    if not np.array_equal(test_y[i][j], np.zeros(NUMBER_OF_CLASSES)):
+                    if not np.array_equal(test_set[i][j][:200], np.zeros(200)):
                         # train_set[i][j] = np.append(train_set[i][j], tr_x_feature_val[tweet_counter])
                         try:
                             new_branch.append(

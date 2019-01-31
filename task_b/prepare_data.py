@@ -11,6 +11,9 @@ def load_twitter_data():
     os.chdir(_DATA_DIR)
     data = pd.read_pickle('twitter_new2.pkl')
 
+    test_data = pd.read_pickle('twitter_test.pkl')
+    data['test'] = test_data['test']
+
     return data
 
 
@@ -19,6 +22,9 @@ def load_reddit_data():
 
     os.chdir(_DATA_DIR)
     data = pd.read_pickle('reddit_new2.pkl')
+
+    test_data = pd.read_pickle('reddit_test.pkl')
+    data['test'] = test_data['test']
 
     return data
 
@@ -69,7 +75,7 @@ def print_structure_example():
     pass
 
 
-def branchify_twitter_taskb_extraction_loop(data, branches_texts, branches_labels):
+def branchify_twitter_taskb_extraction_loop(data, branches_texts, branches_labels, has_labels=True):
     """Extract tweets from ids of branches"""
 
     for source_text in data:
@@ -98,7 +104,7 @@ def branchify_twitter_taskb_extraction_loop(data, branches_texts, branches_label
             branches_labels.append(source_text['veracity'])
 
 
-def branchify_reddit_taskb_extraction_loop(data, branches_texts, branches_labels):
+def branchify_reddit_taskb_extraction_loop(data, branches_texts, branches_labels, has_labels=True):
     """Extract reddit posts from ids of branches"""
     za_ispisati = True
     for source_text in data:

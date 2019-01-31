@@ -1,6 +1,7 @@
 from sequential.prepare_seq_data import *
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelBinarizer
 import numpy as np
+import copy
 
 def scale(x_train, x_test):
 
@@ -95,10 +96,14 @@ def reddit_score_feature():
     d_tw = load_reddit_data()
     tr_x_score = branchify_reddit_extract_feature_from_data_loop(d_tw['train'], 'score')
     dv_x_score = branchify_reddit_extract_feature_from_data_loop(d_tw['dev'], 'score')
+    ts_x_score = branchify_reddit_extract_feature_from_data_loop(d_tw['test'], 'score')
+
+    ts_x_score_orig = copy.deepcopy(ts_x_score)
 
     tr_x_score, dv_x_score = scale(tr_x_score, dv_x_score)
+    _, ts_x_score = scale(ts_x_score_orig, ts_x_score)
 
-    return tr_x_score, None, dv_x_score
+    return tr_x_score, ts_x_score, dv_x_score
 
 def reddit_controversiality_feature():
     """

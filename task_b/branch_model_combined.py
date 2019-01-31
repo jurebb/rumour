@@ -426,4 +426,5 @@ def main():
     print(predictions_final_format)
 
 
-submit_task_b('twitter_new2.pkl', 'reddit_new2.pkl')
+if __name__ == "__main__":
+    submit_task_b('twitter_new2.pkl', 'reddit_new2.pkl')
